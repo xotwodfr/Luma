@@ -211,9 +211,13 @@ ${entries(t.type).map(([k, v]) => `    <x:Double x:Key="LumaType${pascal(k)}Size
 `;
 }
 
+// QML reads a property named on + Uppercase as a signal handler, so onPrimary etc. would silently
+// not exist. In QML those tokens are named textOnPrimary, textOnLamp, …
+export const qmlName = (k) => (/^on[A-Z]/.test(k) ? 'text' + pascal(k) : k);
+
 function qml(t) {
   const colors = entries(t.color.light)
-    .map(([k, v]) => `    readonly property color ${k}: dark ? "${t.color.dark[k]}" : "${v}"`)
+    .map(([k, v]) => `    readonly property color ${qmlName(k)}: dark ? "${t.color.dark[k]}" : "${v}"`)
     .join('\n');
   const group = (name, o, prefix = '') =>
     `    readonly property QtObject ${name}: QtObject {

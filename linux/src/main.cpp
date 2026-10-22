@@ -7,7 +7,10 @@
 #include <QQuickWindow>
 #include <QTimer>
 
+#include "AppController.h"
 #include "IconProvider.h"
+
+#include <QStandardPaths>
 
 // The platform theme normally supplies the desktop's UI font (Noto Sans on KDE, Cantarell or
 // Adwaita Sans on GNOME). Headless platforms fall back to a generic face; pick a real one.
@@ -45,12 +48,26 @@ int main(int argc, char *argv[])
     QCommandLineOption shot(QStringLiteral("screenshot"), QStringLiteral("Save a screenshot and exit."), QStringLiteral("file"));
     QCommandLineOption size(QStringLiteral("size"), QStringLiteral("Window size WxH."), QStringLiteral("size"), QStringLiteral("1280x800"));
     QCommandLineOption after(QStringLiteral("after-ms"), QStringLiteral("Screenshot delay."), QStringLiteral("ms"), QStringLiteral("1500"));
-    cli.addOptions({server, profile, theme, shot, size, after});
+    QCommandLineOption openWith(QStringLiteral("open-with"), QStringLiteral("Open the conversation with this username (demos, screenshots)."), QStringLiteral("username"));
+    cli.addOptions({server, profile, theme, shot, size, after, openWith});
     cli.process(app);
 
     ensureUiFont();
     QFontDatabase::addApplicationFont(QStringLiteral(":/qt/qml/Luma/assets/fonts/InstrumentSans.ttf"));
     QQuickStyle::setStyle(QStringLiteral("Basic"));
+
+    const QString profileDir = cli.isSet(profile) ? cli.value(profile)
+                                                  : QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    AppController controller(QUrl(cli.value(server)), profileDir);
+    qmlRegisterSingletonInstance("Luma", 1, 0, "App", &controller);
+    controller.restoreSession();
+    if (cli.isSet(openWith) && !cli.value(openWith).isEmpty()) {
+        const QString who = cli.value(openWith);
+        QObject::connect(&controller, &AppController::syncedChanged, &controller, [&controller, who] {
+            if (controller.synced() && controller.current().isEmpty())
+                controller.startDirect(who);
+        });
+    }
 
     QQmlApplicationEngine engine;
     engine.addImageProvider(QStringLiteral("icon"), new IconProvider(QStringLiteral(":/qt/qml/Luma/assets/icons")));

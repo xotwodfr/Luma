@@ -32,3 +32,11 @@ test('output is deterministic', () => {
   generate(tokens, b);
   for (const f of files) assert.equal(readFileSync(join(a, f), 'utf8'), readFileSync(join(b, f), 'utf8'), f);
 });
+
+test('QML never emits on+Uppercase property names (they would parse as signal handlers)', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'luma-gen-'));
+  generate(tokens, dir);
+  const src = readFileSync(join(dir, 'LumaTokens.qml'), 'utf8');
+  assert.doesNotMatch(src, /property \w+ on[A-Z]/);
+  assert.match(src, /property color textOnPrimary:/);
+});

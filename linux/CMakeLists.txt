@@ -22,12 +22,15 @@ target_sources(luma_core PRIVATE
     src/core/Transport.h
     src/core/RealtimeClient.cpp src/core/RealtimeClient.h
     src/core/Sync.cpp src/core/Sync.h
+    src/core/Format.cpp src/core/Format.h
+    src/core/MessageListModel.cpp src/core/MessageListModel.h
+    src/core/ConversationListModel.cpp src/core/ConversationListModel.h
 )
-target_include_directories(luma_core PUBLIC src src/core)
+target_include_directories(luma_core PUBLIC src src/core src/app)
 target_link_libraries(luma_core PUBLIC Qt6::Core Qt6::Gui Qt6::Quick Qt6::Network Qt6::WebSockets Qt6::Sql Qt6::Svg)
 
 # ── App ────────────────────────────────────────────────────────────────────────
-qt_add_executable(luma src/main.cpp)
+qt_add_executable(luma src/main.cpp src/app/AppController.cpp src/app/AppController.h)
 set_target_properties(luma PROPERTIES OUTPUT_NAME luma)
 target_link_libraries(luma PRIVATE luma_core Qt6::QuickControls2 Qt6Keychain::Qt6Keychain)
 target_compile_definitions(luma PRIVATE PROJECT_VERSION_STRING="${PROJECT_VERSION}")
@@ -43,6 +46,26 @@ qt_add_qml_module(luma
     QML_FILES
         ${LUMA_DESIGN_DIR}/LumaTokens.qml
         qml/Main.qml
+        qml/SignIn.qml
+        qml/ChatsPane.qml
+        qml/ChatView.qml
+        qml/Rail.qml
+        qml/NewConversation.qml
+        qml/components/Icon.qml
+        qml/components/IconButton.qml
+        qml/components/Avatar.qml
+        qml/components/Badge.qml
+        qml/components/LumaLine.qml
+        qml/components/StatusNote.qml
+        qml/components/LumaTextField.qml
+        qml/components/LumaButton.qml
+        qml/components/EmptyState.qml
+        qml/components/LumaGlyph.qml
+        qml/components/ConversationRow.qml
+        qml/components/MessageDelegate.qml
+        qml/components/TypingBubble.qml
+        qml/components/Composer.qml
+        qml/components/AccountButton.qml
     RESOURCES
         assets/fonts/InstrumentSans.ttf
         ${LUMA_ICONS}
@@ -64,3 +87,4 @@ luma_test(tst_store)
 luma_test(tst_backoff)
 luma_test(tst_sync)
 luma_test(tst_e2e)
+luma_test(tst_models)
