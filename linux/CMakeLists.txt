@@ -15,6 +15,10 @@ set(LUMA_DESIGN_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../design/generated)
 qt_add_library(luma_core STATIC)
 target_sources(luma_core PRIVATE
     src/IconProvider.cpp src/IconProvider.h
+    src/core/Types.cpp src/core/Types.h
+    src/core/Store.cpp src/core/Store.h
+    src/core/Backoff.h
+    src/core/ApiClient.cpp src/core/ApiClient.h
 )
 target_include_directories(luma_core PUBLIC src src/core)
 target_link_libraries(luma_core PUBLIC Qt6::Core Qt6::Gui Qt6::Quick Qt6::Network Qt6::WebSockets Qt6::Sql Qt6::Svg)
@@ -53,3 +57,5 @@ function(luma_test name)
     set_tests_properties(${name} PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 endfunction()
 luma_test(tst_icons)
+luma_test(tst_store)
+luma_test(tst_backoff)
