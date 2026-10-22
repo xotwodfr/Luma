@@ -297,3 +297,28 @@ func TestHealth(t *testing.T) {
 		t.Fatalf("ready: %d %s", r.Status, r.Raw)
 	}
 }
+
+// Per-account login throttle: independent of client IP, identical for unknown usernames.
+func TestLogin_PerAccountLimit(t *testing.T) {
+	h := newHarness(t) // per-IP limit is relaxed in the harness; the account limit is production's
+	h.register("alice")
+	for _, name := range []string{"alice", "nobody_here"} {
+		limited := -1
+		for i := 0; i < 32; i++ {
+			r := h.login(name, "wrong-password")
+			if r.Status == 429 {
+				limited = i
+				break
+			}
+			if r.Status != 401 {
+				t.Fatalf("%s attempt %d: %d", name, i, r.Status)
+			}
+		}
+		if limited != 30 {
+			t.Fatalf("%s: throttled at attempt %d, want 30", name, limited)
+		}
+	}
+	if r := h.login("ALICE", "password-alice"); r.Status != 429 {
+		t.Fatalf("case-folded username must share the bucket: %d", r.Status)
+	}
+}

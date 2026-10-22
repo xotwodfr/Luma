@@ -7,6 +7,8 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"net/netip"
+	"slices"
 	"strings"
 	"time"
 )
@@ -18,15 +20,15 @@ const (
 	keyUser
 )
 
-// ClientIP returns the caller's IP. Proxy headers are honoured only when trusted
-// is set AND the TCP peer is loopback, i.e. the request came through Caddy on this host.
-func ClientIP(r *http.Request, trusted bool) string {
+// ClientIP returns the caller's IP. Proxy headers are honoured only when the TCP peer is
+// in a trusted prefix, i.e. the request came through Caddy on this host.
+func ClientIP(r *http.Request, trusted []netip.Prefix) string {
 	host, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {
 		host = r.RemoteAddr
 	}
-	if trusted {
-		if ip := net.ParseIP(host); ip != nil && ip.IsLoopback() {
+	if peer, err := netip.ParseAddr(host); err == nil && len(trusted) > 0 {
+		if slices.ContainsFunc(trusted, func(p netip.Prefix) bool { return p.Contains(peer.Unmap()) }) {
 			if cf := strings.TrimSpace(r.Header.Get("CF-Connecting-IP")); net.ParseIP(cf) != nil {
 				return cf
 			}

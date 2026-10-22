@@ -4,8 +4,10 @@ package config
 import (
 	"errors"
 	"fmt"
+	"net/netip"
 	"os"
 	"strconv"
+	"strings"
 )
 
 type Config struct {
@@ -16,9 +18,11 @@ type Config struct {
 	MaxUploadBytes int64
 	// Registration is "invite" (default), "open" or "closed".
 	Registration string
-	// TrustedProxy: read the client IP from CF-Connecting-IP / X-Forwarded-For,
-	// but only on requests whose remote address is loopback (Caddy on the same host).
-	TrustedProxy bool
+	// TrustedProxies: read the client IP from CF-Connecting-IP / X-Forwarded-For, but only on
+	// requests whose TCP peer is in one of these prefixes (Caddy on the same host). From
+	// LUMA_TRUSTED_PROXY: "1" means loopback (bare-metal); in a container, set it to the bridge
+	// gateway, which is where host connections to the published port come from.
+	TrustedProxies []netip.Prefix
 }
 
 func Load() (Config, error) {
@@ -28,8 +32,12 @@ func Load() (Config, error) {
 		PublicURL:    env("LUMA_PUBLIC_URL", "https://chat.folk3s.com"),
 		UploadDir:    env("LUMA_UPLOAD_DIR", "./data/uploads"),
 		Registration: env("LUMA_REGISTRATION", "invite"),
-		TrustedProxy: os.Getenv("LUMA_TRUSTED_PROXY") == "1",
 	}
+	tp, err := parseProxies(os.Getenv("LUMA_TRUSTED_PROXY"))
+	if err != nil {
+		return c, err
+	}
+	c.TrustedProxies = tp
 	if c.DatabaseURL == "" {
 		return c, errors.New("LUMA_DATABASE_URL is required")
 	}
@@ -44,6 +52,29 @@ func Load() (Config, error) {
 	}
 	c.MaxUploadBytes = max
 	return c, nil
+}
+
+func parseProxies(v string) ([]netip.Prefix, error) {
+	if v == "" {
+		return nil, nil
+	}
+	if v == "1" {
+		return []netip.Prefix{netip.MustParsePrefix("127.0.0.0/8"), netip.MustParsePrefix("::1/128")}, nil
+	}
+	var out []netip.Prefix
+	for _, f := range strings.Split(v, ",") {
+		f = strings.TrimSpace(f)
+		p, err := netip.ParsePrefix(f)
+		if err != nil {
+			a, aerr := netip.ParseAddr(f)
+			if aerr != nil {
+				return nil, fmt.Errorf("LUMA_TRUSTED_PROXY: %q is not an IP or CIDR", f)
+			}
+			p = netip.PrefixFrom(a, a.BitLen())
+		}
+		out = append(out, p)
+	}
+	return out, nil
 }
 
 func env(key, def string) string {

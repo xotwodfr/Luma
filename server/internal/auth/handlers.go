@@ -2,6 +2,7 @@ package auth
 
 import (
 	"net/http"
+	"net/netip"
 	"time"
 
 	"github.com/google/uuid"
@@ -9,15 +10,18 @@ import (
 	"luma.folk3s.com/server/internal/httpx"
 )
 
-// Handlers exposes the auth service over HTTP. Limit throttles credential endpoints per client IP.
+// Handlers exposes the auth service over HTTP. Limit throttles credential endpoints per client IP;
+// AccountLimit throttles login attempts per username, so guessing one account's password stays
+// slow even if the client IP can be spoofed or rotated. Unknown usernames are throttled the same way.
 type Handlers struct {
-	Svc          *Service
-	Limit        *httpx.Limiter
-	TrustedProxy bool
+	Svc            *Service
+	Limit          *httpx.Limiter
+	AccountLimit   *httpx.Limiter
+	TrustedProxies []netip.Prefix
 }
 
 func (h *Handlers) device(r *http.Request, name, platform string) Device {
-	return Device{Name: name, Platform: platform, IP: httpx.ClientIP(r, h.TrustedProxy)}
+	return Device{Name: name, Platform: platform, IP: httpx.ClientIP(r, h.TrustedProxies)}
 }
 
 type authResponse struct {
@@ -26,7 +30,7 @@ type authResponse struct {
 }
 
 func (h *Handlers) Register(w http.ResponseWriter, r *http.Request) {
-	if !h.Limit.Limit(w, "auth:"+httpx.ClientIP(r, h.TrustedProxy)) {
+	if !h.Limit.Limit(w, "auth:"+httpx.ClientIP(r, h.TrustedProxies)) {
 		return
 	}
 	var in RegisterInput
@@ -43,7 +47,7 @@ func (h *Handlers) Register(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handlers) Login(w http.ResponseWriter, r *http.Request) {
-	if !h.Limit.Limit(w, "auth:"+httpx.ClientIP(r, h.TrustedProxy)) {
+	if !h.Limit.Limit(w, "auth:"+httpx.ClientIP(r, h.TrustedProxies)) {
 		return
 	}
 	var in struct {
@@ -54,6 +58,9 @@ func (h *Handlers) Login(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := httpx.DecodeJSON(w, r, &in); err != nil {
 		httpx.Fail(w, r, err)
+		return
+	}
+	if !h.AccountLimit.Limit(w, NormalizeUsername(in.Username)) {
 		return
 	}
 	token, u, err := h.Svc.Login(r.Context(), in.Username, in.Password, h.device(r, in.DeviceName, in.Platform))
