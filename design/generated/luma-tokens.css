@@ -90,7 +90,7 @@
   --luma-type-caption-weight: 500;
   --luma-type-caption-tracking: 0.1px;
   --luma-font-display: "Instrument Sans", system-ui, sans-serif;
-  --luma-font-ui: "Inter", system-ui, sans-serif;
+  --luma-font-ui: system-ui, sans-serif;
   --luma-duration-instant: 90ms;
   --luma-duration-quick: 160ms;
   --luma-duration-standard: 240ms;
@@ -152,4 +152,59 @@
   --luma-color-focus-ring: #ECF0F2;
   --luma-color-scrim: #000000;
   --luma-shadow-overlay: 0 12px 32px rgba(0, 0, 0, 0.55);
+}
+/* Scoped themes, for showing both side by side regardless of the page theme. */
+.luma-light {
+  --luma-color-ground: #F1F3F4;
+  --luma-color-surface: #FFFFFF;
+  --luma-color-surface-raised: #FFFFFF;
+  --luma-color-surface-sunken: #E9EDEF;
+  --luma-color-hairline: #DDE2E5;
+  --luma-color-text: #0E1418;
+  --luma-color-text-secondary: #47525A;
+  --luma-color-text-tertiary: #5F6A72;
+  --luma-color-bubble-out: #141A1E;
+  --luma-color-on-bubble-out: #F2F5F6;
+  --luma-color-bubble-out-meta: #A3ADB3;
+  --luma-color-bubble-in: #E9EDEF;
+  --luma-color-on-bubble-in: #0E1418;
+  --luma-color-bubble-in-meta: #56616A;
+  --luma-color-primary: #141A1E;
+  --luma-color-on-primary: #F2F5F6;
+  --luma-color-lamp: #F2AE2E;
+  --luma-color-on-lamp: #1A1405;
+  --luma-color-selection: #E3E8EB;
+  --luma-color-danger: #B8322A;
+  --luma-color-on-danger: #FFFFFF;
+  --luma-color-focus-ring: #0E1418;
+  --luma-color-scrim: #0E1418;
+  --luma-shadow-overlay: 0 12px 32px rgba(0, 0, 0, 0.14);
+  color-scheme: light;
+}
+.luma-dark {
+  --luma-color-ground: #0B0F12;
+  --luma-color-surface: #11161A;
+  --luma-color-surface-raised: #192025;
+  --luma-color-surface-sunken: #0B0F12;
+  --luma-color-hairline: #232B31;
+  --luma-color-text: #ECF0F2;
+  --luma-color-text-secondary: #A7B1B8;
+  --luma-color-text-tertiary: #86919A;
+  --luma-color-bubble-out: #E8EDF0;
+  --luma-color-on-bubble-out: #0B0F12;
+  --luma-color-bubble-out-meta: #4E5961;
+  --luma-color-bubble-in: #1C2328;
+  --luma-color-on-bubble-in: #ECF0F2;
+  --luma-color-bubble-in-meta: #8E99A1;
+  --luma-color-primary: #E8EDF0;
+  --luma-color-on-primary: #0B0F12;
+  --luma-color-lamp: #F5BC4C;
+  --luma-color-on-lamp: #1A1405;
+  --luma-color-selection: #1E262B;
+  --luma-color-danger: #FF8277;
+  --luma-color-on-danger: #1A0705;
+  --luma-color-focus-ring: #ECF0F2;
+  --luma-color-scrim: #000000;
+  --luma-shadow-overlay: 0 12px 32px rgba(0, 0, 0, 0.55);
+  color-scheme: dark;
 }

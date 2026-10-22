@@ -7,5 +7,8 @@
     "contrast": "node tools/contrast.mjs",
     "generate": "node tools/generate.mjs generated",
     "shoot": "node tools/shoot.mjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.64.1"
   }
 }

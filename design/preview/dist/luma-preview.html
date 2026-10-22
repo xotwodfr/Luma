@@ -1,0 +1,916 @@
+<title>Luma Design Foundation</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wdth,wght@75..100,400..700&family=Inter:wght@400;500;600&family=Roboto+Flex:wght@400;500;600&family=Noto+Sans:wght@400;500;600&family=Open+Sans:wght@400;500;600&display=swap">
+<style>
+/* Generated from design/tokens.json — do not edit. */
+:root {
+  color-scheme: light dark;
+  --luma-color-ground: #F1F3F4;
+  --luma-color-surface: #FFFFFF;
+  --luma-color-surface-raised: #FFFFFF;
+  --luma-color-surface-sunken: #E9EDEF;
+  --luma-color-hairline: #DDE2E5;
+  --luma-color-text: #0E1418;
+  --luma-color-text-secondary: #47525A;
+  --luma-color-text-tertiary: #5F6A72;
+  --luma-color-bubble-out: #141A1E;
+  --luma-color-on-bubble-out: #F2F5F6;
+  --luma-color-bubble-out-meta: #A3ADB3;
+  --luma-color-bubble-in: #E9EDEF;
+  --luma-color-on-bubble-in: #0E1418;
+  --luma-color-bubble-in-meta: #56616A;
+  --luma-color-primary: #141A1E;
+  --luma-color-on-primary: #F2F5F6;
+  --luma-color-lamp: #F2AE2E;
+  --luma-color-on-lamp: #1A1405;
+  --luma-color-selection: #E3E8EB;
+  --luma-color-danger: #B8322A;
+  --luma-color-on-danger: #FFFFFF;
+  --luma-color-focus-ring: #0E1418;
+  --luma-color-scrim: #0E1418;
+  --luma-shadow-overlay: 0 12px 32px rgba(0, 0, 0, 0.14);
+  --luma-space-0: 0px;
+  --luma-space-1: 2px;
+  --luma-space-2: 4px;
+  --luma-space-3: 8px;
+  --luma-space-4: 12px;
+  --luma-space-5: 16px;
+  --luma-space-6: 20px;
+  --luma-space-7: 24px;
+  --luma-space-8: 32px;
+  --luma-space-9: 40px;
+  --luma-space-10: 48px;
+  --luma-space-11: 64px;
+  --luma-size-avatar-s: 28px;
+  --luma-size-avatar-m: 44px;
+  --luma-size-avatar-l: 56px;
+  --luma-size-avatar-x-l: 96px;
+  --luma-size-hit-min: 44px;
+  --luma-size-row: 72px;
+  --luma-size-composer-min: 44px;
+  --luma-size-badge: 20px;
+  --luma-size-presence-dot: 10px;
+  --luma-size-luma-line: 2px;
+  --luma-size-sidebar: 264px;
+  --luma-size-list-pane: 340px;
+  --luma-size-bubble-max: 560px;
+  --luma-radius-xs: 6px;
+  --luma-radius-s: 10px;
+  --luma-radius-m: 14px;
+  --luma-radius-bubble: 20px;
+  --luma-radius-bubble-joined: 6px;
+  --luma-radius-sheet: 24px;
+  --luma-radius-pill: 999px;
+  --luma-type-large-title-size: 32px;
+  --luma-type-large-title-line: 38px;
+  --luma-type-large-title-weight: 600;
+  --luma-type-large-title-tracking: -0.6px;
+  --luma-type-title-size: 22px;
+  --luma-type-title-line: 28px;
+  --luma-type-title-weight: 600;
+  --luma-type-title-tracking: -0.3px;
+  --luma-type-headline-size: 16px;
+  --luma-type-headline-line: 21px;
+  --luma-type-headline-weight: 600;
+  --luma-type-headline-tracking: -0.1px;
+  --luma-type-body-size: 16px;
+  --luma-type-body-line: 22px;
+  --luma-type-body-weight: 400;
+  --luma-type-body-tracking: 0px;
+  --luma-type-callout-size: 15px;
+  --luma-type-callout-line: 20px;
+  --luma-type-callout-weight: 400;
+  --luma-type-callout-tracking: 0px;
+  --luma-type-subhead-size: 14px;
+  --luma-type-subhead-line: 19px;
+  --luma-type-subhead-weight: 400;
+  --luma-type-subhead-tracking: 0px;
+  --luma-type-footnote-size: 13px;
+  --luma-type-footnote-line: 18px;
+  --luma-type-footnote-weight: 400;
+  --luma-type-footnote-tracking: 0px;
+  --luma-type-caption-size: 12px;
+  --luma-type-caption-line: 16px;
+  --luma-type-caption-weight: 500;
+  --luma-type-caption-tracking: 0.1px;
+  --luma-font-display: "Instrument Sans", system-ui, sans-serif;
+  --luma-font-ui: system-ui, sans-serif;
+  --luma-duration-instant: 90ms;
+  --luma-duration-quick: 160ms;
+  --luma-duration-standard: 240ms;
+  --luma-duration-emphasized: 380ms;
+  --luma-duration-luma-pulse: 1600ms;
+  --luma-curve-standard: cubic-bezier(0.2, 0, 0, 1);
+  --luma-curve-exit: cubic-bezier(0.4, 0, 1, 1);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --luma-color-ground: #0B0F12;
+    --luma-color-surface: #11161A;
+    --luma-color-surface-raised: #192025;
+    --luma-color-surface-sunken: #0B0F12;
+    --luma-color-hairline: #232B31;
+    --luma-color-text: #ECF0F2;
+    --luma-color-text-secondary: #A7B1B8;
+    --luma-color-text-tertiary: #86919A;
+    --luma-color-bubble-out: #E8EDF0;
+    --luma-color-on-bubble-out: #0B0F12;
+    --luma-color-bubble-out-meta: #4E5961;
+    --luma-color-bubble-in: #1C2328;
+    --luma-color-on-bubble-in: #ECF0F2;
+    --luma-color-bubble-in-meta: #8E99A1;
+    --luma-color-primary: #E8EDF0;
+    --luma-color-on-primary: #0B0F12;
+    --luma-color-lamp: #F5BC4C;
+    --luma-color-on-lamp: #1A1405;
+    --luma-color-selection: #1E262B;
+    --luma-color-danger: #FF8277;
+    --luma-color-on-danger: #1A0705;
+    --luma-color-focus-ring: #ECF0F2;
+    --luma-color-scrim: #000000;
+    --luma-shadow-overlay: 0 12px 32px rgba(0, 0, 0, 0.55);
+  }
+}
+:root[data-theme="dark"] {
+  --luma-color-ground: #0B0F12;
+  --luma-color-surface: #11161A;
+  --luma-color-surface-raised: #192025;
+  --luma-color-surface-sunken: #0B0F12;
+  --luma-color-hairline: #232B31;
+  --luma-color-text: #ECF0F2;
+  --luma-color-text-secondary: #A7B1B8;
+  --luma-color-text-tertiary: #86919A;
+  --luma-color-bubble-out: #E8EDF0;
+  --luma-color-on-bubble-out: #0B0F12;
+  --luma-color-bubble-out-meta: #4E5961;
+  --luma-color-bubble-in: #1C2328;
+  --luma-color-on-bubble-in: #ECF0F2;
+  --luma-color-bubble-in-meta: #8E99A1;
+  --luma-color-primary: #E8EDF0;
+  --luma-color-on-primary: #0B0F12;
+  --luma-color-lamp: #F5BC4C;
+  --luma-color-on-lamp: #1A1405;
+  --luma-color-selection: #1E262B;
+  --luma-color-danger: #FF8277;
+  --luma-color-on-danger: #1A0705;
+  --luma-color-focus-ring: #ECF0F2;
+  --luma-color-scrim: #000000;
+  --luma-shadow-overlay: 0 12px 32px rgba(0, 0, 0, 0.55);
+}
+/* Scoped themes, for showing both side by side regardless of the page theme. */
+.luma-light {
+  --luma-color-ground: #F1F3F4;
+  --luma-color-surface: #FFFFFF;
+  --luma-color-surface-raised: #FFFFFF;
+  --luma-color-surface-sunken: #E9EDEF;
+  --luma-color-hairline: #DDE2E5;
+  --luma-color-text: #0E1418;
+  --luma-color-text-secondary: #47525A;
+  --luma-color-text-tertiary: #5F6A72;
+  --luma-color-bubble-out: #141A1E;
+  --luma-color-on-bubble-out: #F2F5F6;
+  --luma-color-bubble-out-meta: #A3ADB3;
+  --luma-color-bubble-in: #E9EDEF;
+  --luma-color-on-bubble-in: #0E1418;
+  --luma-color-bubble-in-meta: #56616A;
+  --luma-color-primary: #141A1E;
+  --luma-color-on-primary: #F2F5F6;
+  --luma-color-lamp: #F2AE2E;
+  --luma-color-on-lamp: #1A1405;
+  --luma-color-selection: #E3E8EB;
+  --luma-color-danger: #B8322A;
+  --luma-color-on-danger: #FFFFFF;
+  --luma-color-focus-ring: #0E1418;
+  --luma-color-scrim: #0E1418;
+  --luma-shadow-overlay: 0 12px 32px rgba(0, 0, 0, 0.14);
+  color-scheme: light;
+}
+.luma-dark {
+  --luma-color-ground: #0B0F12;
+  --luma-color-surface: #11161A;
+  --luma-color-surface-raised: #192025;
+  --luma-color-surface-sunken: #0B0F12;
+  --luma-color-hairline: #232B31;
+  --luma-color-text: #ECF0F2;
+  --luma-color-text-secondary: #A7B1B8;
+  --luma-color-text-tertiary: #86919A;
+  --luma-color-bubble-out: #E8EDF0;
+  --luma-color-on-bubble-out: #0B0F12;
+  --luma-color-bubble-out-meta: #4E5961;
+  --luma-color-bubble-in: #1C2328;
+  --luma-color-on-bubble-in: #ECF0F2;
+  --luma-color-bubble-in-meta: #8E99A1;
+  --luma-color-primary: #E8EDF0;
+  --luma-color-on-primary: #0B0F12;
+  --luma-color-lamp: #F5BC4C;
+  --luma-color-on-lamp: #1A1405;
+  --luma-color-selection: #1E262B;
+  --luma-color-danger: #FF8277;
+  --luma-color-on-danger: #1A0705;
+  --luma-color-focus-ring: #ECF0F2;
+  --luma-color-scrim: #000000;
+  --luma-shadow-overlay: 0 12px 32px rgba(0, 0, 0, 0.55);
+  color-scheme: dark;
+}
+
+</style>
+<style>
+/* Layout: a left-aligned review sheet. The thesis comes first, then the platforms, states and foundation, all inside one 1160px column. */
+:root {
+  --page-font: "Noto Sans", system-ui, sans-serif;
+  --display: "Instrument Sans", "Noto Sans", system-ui, sans-serif;
+  --col: 1160px;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--luma-color-ground);
+  color: var(--luma-color-text);
+  font: 15px/1.55 var(--page-font);
+  -webkit-font-smoothing: antialiased;
+}
+.page {
+  max-width: calc(var(--col) + 2 * 32px);
+  margin: 0 auto;
+  padding-block: 40px 96px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid;
+  gap: 88px;
+}
+@media (min-width: 720px) { .page { padding-left: max(32px, env(safe-area-inset-left, 0px)); padding-right: max(32px, env(safe-area-inset-right, 0px)); } }
+h1, h2, h3 { font-family: var(--display); font-weight: 600; margin: 0; text-wrap: balance; }
+h2 { font-size: 32px; line-height: 38px; letter-spacing: -0.6px; }
+h3 { font-size: 20px; line-height: 26px; letter-spacing: -0.2px; }
+p { margin: 0; max-width: 64ch; }
+.muted { color: var(--luma-color-text-secondary); }
+.fine { font-size: 13px; line-height: 18px; color: var(--luma-color-text-tertiary); }
+a { color: inherit; text-underline-offset: 3px; text-decoration-thickness: 1px; }
+:focus-visible { outline: 2px solid var(--luma-color-focus-ring); outline-offset: 2px; border-radius: 4px; }
+section { display: grid; gap: 28px; }
+.section-head { display: grid; gap: 10px; }
+
+/* Masthead */
+.mast { display: grid; gap: 28px; }
+.brand { display: flex; align-items: center; gap: 14px; }
+.brand svg { width: 44px; height: 44px; flex: none; }
+.wordmark { font-family: var(--display); font-size: 44px; line-height: 1; font-weight: 600; letter-spacing: -1.4px; font-stretch: 92%; }
+.mast-nav { display: flex; flex-wrap: wrap; gap: 8px 20px; font-size: 14px; }
+.mast-nav a { color: var(--luma-color-text-secondary); text-decoration: none; }
+.mast-nav a:hover { color: var(--luma-color-text); }
+
+/* Thesis */
+.thesis { display: grid; gap: 40px; align-items: start; }
+@media (min-width: 1020px) { .thesis { grid-template-columns: minmax(0, 1fr) auto; } }
+.thesis-copy { display: grid; gap: 18px; align-content: start; padding-top: 8px; }
+.thesis-copy h1 { font-size: clamp(40px, 6vw, 64px); line-height: 1.02; letter-spacing: -2px; font-stretch: 88%; max-width: 11ch; }
+.thesis-copy p { font-size: 17px; line-height: 1.6; color: var(--luma-color-text-secondary); }
+.phones { display: flex; flex-wrap: wrap; gap: 24px; }
+
+/* Toolbar for frame theme */
+.flip { display: inline-flex; align-items: center; gap: 10px; font-size: 14px; color: var(--luma-color-text-secondary); }
+button { font: inherit; color: inherit; }
+.btn {
+  appearance: none; border: 1px solid var(--luma-color-hairline); background: var(--luma-color-surface);
+  border-radius: var(--luma-radius-s); padding: 7px 14px; cursor: pointer; font-size: 14px;
+  transition: background var(--luma-duration-instant) var(--luma-curve-standard);
+}
+.btn:hover { background: var(--luma-color-selection); }
+.btn-primary { background: var(--luma-color-primary); color: var(--luma-color-on-primary); border-color: transparent; }
+.btn-primary:hover { background: var(--luma-color-primary); opacity: .88; }
+
+/* Platform blocks */
+.platform { display: grid; gap: 16px; }
+.platform-head { display: grid; gap: 6px; }
+.platform-row { display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start; }
+.scroll-x { overflow-x: auto; padding-bottom: 4px; }
+
+/* ─── Frames (everything below reads only luma tokens) ─── */
+.frame { color: var(--luma-color-text); background: var(--luma-color-surface); font-family: var(--ui); position: relative; overflow: hidden; }
+.ios, .mac { --ui: "Inter", -apple-system, system-ui, sans-serif; }
+.android { --ui: "Roboto Flex", "Roboto", system-ui, sans-serif; }
+.win { --ui: "Open Sans", "Segoe UI Variable", "Segoe UI", system-ui, sans-serif; }
+.linux { --ui: "Noto Sans", system-ui, sans-serif; }
+.frame svg.i { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+
+.phone { width: 360px; height: 760px; border-radius: 46px; border: 1px solid var(--luma-color-hairline); display: flex; flex-direction: column; }
+.android.phone { border-radius: 34px; }
+.statusbar { height: 44px; padding: 14px 28px 0; display: flex; justify-content: space-between; font-size: 14px; font-weight: 600; flex: none; }
+.statusbar .dots { display: flex; gap: 5px; align-items: center; }
+.statusbar .dots i { width: 16px; height: 9px; border-radius: 2px; background: currentColor; opacity: .9; display: block; }
+.statusbar .dots i:first-child { width: 14px; opacity: .55; }
+.homebar { height: 30px; display: grid; place-items: center; flex: none; }
+.homebar i { width: 120px; height: 5px; border-radius: 3px; background: var(--luma-color-text); opacity: .85; display: block; }
+.android .homebar i { width: 96px; height: 4px; opacity: .5; }
+
+/* Chat header + luma line */
+.chat { display: flex; flex-direction: column; min-height: 0; flex: 1; background: var(--luma-color-surface); }
+.chat-head { display: flex; align-items: center; gap: 10px; padding: 6px 12px 10px; flex: none; position: relative; }
+.chat-head .who { display: grid; justify-items: start; line-height: 1.2; min-width: 0; }
+.ios .chat-head .who { justify-items: center; flex: 1; }
+.chat-head .name { font-weight: 600; font-size: 16px; }
+.chat-head .status { font-size: 12px; color: var(--luma-color-text-tertiary); display: inline-flex; align-items: center; gap: 5px; font-variant-numeric: tabular-nums; }
+.back { display: inline-flex; align-items: center; gap: 2px; color: var(--luma-color-text); font-size: 16px; min-width: 64px; }
+.back svg.i { width: 22px; height: 22px; }
+.head-end { min-width: 64px; display: flex; justify-content: flex-end; }
+.luma-line { position: absolute; left: 0; right: 0; bottom: 0; height: var(--luma-size-luma-line); background: var(--luma-color-text-tertiary); opacity: 0; }
+.chat-head::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 1px; background: var(--luma-color-hairline); }
+.is-reconnecting .luma-line { animation: breathe var(--luma-duration-luma-pulse) var(--luma-curve-standard) infinite alternate; }
+.is-offline .luma-line { opacity: 1; }
+@keyframes breathe { from { opacity: .2; } to { opacity: 1; } }
+.conn-note { font-size: 12px; text-align: center; padding: 6px 12px; color: var(--luma-color-text-secondary); background: var(--luma-color-surface); flex: none; font-variant-numeric: tabular-nums; }
+
+/* Messages */
+.msgs { flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; gap: 12px; padding: 12px 12px 8px; }
+.sep { align-self: center; font-size: 12px; font-weight: 500; color: var(--luma-color-text-tertiary); padding: 4px 0; }
+.sys { align-self: center; font-size: 12px; color: var(--luma-color-text-tertiary); }
+.group { display: grid; gap: 2px; justify-items: start; }
+.group.out { justify-items: end; }
+.run { display: flex; align-items: flex-end; gap: 8px; }
+.run > .group { flex: 1; min-width: 0; }
+.sender { font-size: 12px; color: var(--luma-color-text-secondary); padding: 0 12px 2px; }
+.b {
+  max-width: min(78%, var(--luma-size-bubble-max)); padding: 8px 12px 8px; font-size: 16px; line-height: 22px;
+  border-radius: var(--luma-radius-bubble); background: var(--luma-color-bubble-in); color: var(--luma-color-on-bubble-in);
+  overflow-wrap: anywhere;
+}
+
+.out .b { background: var(--luma-color-bubble-out); color: var(--luma-color-on-bubble-out); }
+.group:not(.out) .b:not(:last-child) { border-bottom-left-radius: var(--luma-radius-bubble-joined); }
+.group:not(.out) .b:not(:first-of-type) { border-top-left-radius: var(--luma-radius-bubble-joined); }
+.out .b:not(:last-child) { border-bottom-right-radius: var(--luma-radius-bubble-joined); }
+.out .b:not(:first-of-type) { border-top-right-radius: var(--luma-radius-bubble-joined); }
+.meta { float: right; margin: 7px -2px -3px 10px; font-size: 11px; line-height: 14px; font-weight: 500; font-variant-numeric: tabular-nums; display: inline-flex; align-items: center; gap: 4px; color: var(--luma-color-bubble-in-meta); }
+.out .meta { color: var(--luma-color-bubble-out-meta); }
+.rc { width: 11px; height: 11px; flex: none; }
+.rc circle { stroke: currentColor; stroke-width: 1.5; fill: none; }
+.rc .fillc { fill: currentColor; stroke: none; }
+.fail-note { font-size: 12px; color: var(--luma-color-danger); padding: 2px 4px 0; }
+.file { display: flex; gap: 10px; align-items: center; min-width: 200px; }
+.file .doc { width: 36px; height: 36px; border-radius: var(--luma-radius-s); display: grid; place-items: center; background: var(--luma-color-surface); color: var(--luma-color-text-secondary); flex: none; }
+.out .file .doc { background: var(--luma-color-on-bubble-out); color: var(--luma-color-bubble-out); }
+.file .fn { font-weight: 500; font-size: 15px; line-height: 20px; }
+.file .fs { font-size: 12px; line-height: 16px; opacity: .8; font-variant-numeric: tabular-nums; }
+.typing { display: inline-flex; gap: 4px; padding: 13px 14px; }
+.typing i { width: 7px; height: 7px; border-radius: 50%; background: var(--luma-color-text-tertiary); display: block; animation: dot 1.2s var(--luma-curve-standard) infinite; }
+.typing i:nth-child(2) { animation-delay: .16s; } .typing i:nth-child(3) { animation-delay: .32s; }
+@keyframes dot { 0%, 100% { opacity: .3; } 40% { opacity: 1; } }
+
+/* Composer */
+.composer { display: flex; align-items: flex-end; gap: 8px; padding: 8px 12px 10px; flex: none; }
+.field { flex: 1; min-height: 40px; display: flex; align-items: center; gap: 8px; padding: 4px 4px 4px 12px; border-radius: var(--luma-radius-pill); background: var(--luma-color-surface-sunken); color: var(--luma-color-text-tertiary); font-size: 16px; }
+.field .txt { flex: 1; color: var(--luma-color-text); }
+.field .ph { flex: 1; }
+.send { width: 32px; height: 32px; border-radius: 50%; background: var(--luma-color-primary); color: var(--luma-color-on-primary); display: grid; place-items: center; flex: none; }
+.send svg.i { width: 18px; height: 18px; stroke-width: 2.2; }
+.win .field, .linux .field { border-radius: var(--luma-radius-s); }
+.win .send, .linux .send { border-radius: var(--luma-radius-s); }
+
+/* Avatars */
+.av { width: var(--s, 44px); height: var(--s, 44px); border-radius: 50%; background: var(--luma-color-surface-sunken); color: var(--luma-color-text-secondary); display: grid; place-items: center; font-weight: 600; font-size: calc(var(--s, 44px) * .36); position: relative; flex: none; letter-spacing: .2px; }
+.av.pair { background: none; }
+.av.pair span { position: absolute; width: 66%; height: 66%; border-radius: 50%; background: var(--luma-color-surface-sunken); display: grid; place-items: center; font-size: calc(var(--s, 44px) * .3); box-shadow: 0 0 0 2px var(--luma-color-surface); }
+.av.pair span:first-child { top: 0; left: 0; } .av.pair span:last-child { bottom: 0; right: 0; background: var(--luma-color-hairline); }
+.av.online { box-shadow: 0 0 0 2px var(--luma-color-surface), 0 0 0 3.5px var(--luma-color-primary); }
+
+/* Conversation list */
+.list { display: flex; flex-direction: column; min-height: 0; overflow: hidden; background: var(--luma-color-surface); }
+.row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 2px 12px; align-items: center; padding: 10px 16px; position: relative; min-height: var(--luma-size-row); }
+.row .av { grid-row: span 2; }
+.row .nm { font-weight: 600; font-size: 16px; line-height: 21px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 6px; }
+.row .tm { font-size: 12px; font-weight: 500; color: var(--luma-color-text-tertiary); font-variant-numeric: tabular-nums; justify-self: end; }
+.row .pv { font-size: 14px; line-height: 19px; color: var(--luma-color-text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.row .pv em { font-style: normal; color: var(--luma-color-text-tertiary); }
+.row .end { justify-self: end; display: flex; align-items: center; gap: 6px; }
+.row .muteic { width: 14px; height: 14px; color: var(--luma-color-text-tertiary); stroke-width: 2; }
+.row + .row::before { content: ""; position: absolute; top: 0; right: 0; left: 72px; height: 1px; background: var(--luma-color-hairline); }
+.row.sel { background: var(--luma-color-selection); }
+.row.sel::after { content: ""; position: absolute; left: 0; top: 12px; bottom: 12px; width: 3px; border-radius: 0 3px 3px 0; background: var(--luma-color-lamp); }
+.row.sel::before, .row.sel + .row::before { display: none; }
+.badge { min-width: var(--luma-size-badge); height: var(--luma-size-badge); padding: 0 6px; border-radius: var(--luma-radius-pill); background: var(--luma-color-lamp); color: var(--luma-color-on-lamp); font-size: 12px; font-weight: 600; display: grid; place-items: center; font-variant-numeric: tabular-nums; }
+.badge.quiet { background: none; color: var(--luma-color-text-tertiary); box-shadow: inset 0 0 0 1.5px var(--luma-color-hairline); }
+.search { margin: 4px 16px 8px; height: 36px; border-radius: var(--luma-radius-s); background: var(--luma-color-surface-sunken); display: flex; align-items: center; gap: 8px; padding: 0 10px; color: var(--luma-color-text-tertiary); font-size: 15px; flex: none; }
+.search svg.i { width: 17px; height: 17px; }
+.search kbd { margin-left: auto; font: inherit; font-size: 12px; padding: 1px 6px; border-radius: 5px; box-shadow: inset 0 0 0 1px var(--luma-color-hairline); }
+
+/* iOS list */
+.ios-top { display: flex; justify-content: space-between; align-items: center; padding: 4px 16px 0; flex: none; color: var(--luma-color-text); }
+.ios-title { font-family: var(--display); font-size: 32px; line-height: 38px; font-weight: 600; letter-spacing: -0.6px; padding: 4px 16px 8px; flex: none; }
+
+/* Android list */
+.m3-bar { display: flex; align-items: center; gap: 12px; padding: 8px 8px 8px 16px; flex: none; }
+.m3-bar .t { flex: 1; font-family: var(--display); font-size: 24px; font-weight: 600; letter-spacing: -0.4px; }
+.iconbtn { width: 48px; height: 48px; display: grid; place-items: center; border-radius: 50%; color: var(--luma-color-text); }
+.fab { position: absolute; right: 16px; bottom: 46px; height: 56px; padding: 0 20px 0 16px; border-radius: 16px; display: flex; align-items: center; gap: 10px; background: var(--luma-color-primary); color: var(--luma-color-on-primary); font-weight: 500; font-size: 15px; box-shadow: 0 6px 16px rgba(0, 0, 0, .18); }
+
+/* Desktop windows */
+.window { width: 100%; min-width: 980px; height: 640px; border: 1px solid var(--luma-color-hairline); display: grid; grid-template-rows: auto minmax(0, 1fr); background: var(--luma-color-ground); box-shadow: var(--luma-shadow-overlay); }
+.mac.window { border-radius: 12px; }
+.win.window, .linux.window { border-radius: 8px; }
+.titlebar { display: flex; align-items: center; gap: 12px; height: 38px; padding: 0 12px; font-size: 13px; color: var(--luma-color-text-secondary); }
+.lights { display: flex; gap: 8px; }
+.lights i { width: 12px; height: 12px; border-radius: 50%; display: block; background: #ff5f57; box-shadow: inset 0 0 0 .5px rgba(0,0,0,.2); }
+.lights i:nth-child(2) { background: #febc2e; } .lights i:nth-child(3) { background: #28c840; }
+.caps { margin-left: auto; display: flex; height: 100%; }
+.caps span { width: 46px; display: grid; place-items: center; }
+.caps svg { width: 10px; height: 10px; stroke: currentColor; fill: none; stroke-width: 1; }
+.panes { display: grid; min-height: 0; }
+.mac .panes { grid-template-columns: 200px 320px minmax(0, 1fr); }
+.win .panes { grid-template-columns: 48px 320px minmax(0, 1fr); }
+.linux .panes { grid-template-columns: 56px 320px minmax(0, 1fr); }
+.pane-list { border-right: 1px solid var(--luma-color-hairline); border-top-left-radius: 0; display: flex; flex-direction: column; min-height: 0; background: var(--luma-color-surface); }
+.pane-chat { display: flex; flex-direction: column; min-height: 0; }
+.desk .chat-head { padding: 12px 20px; }
+.desk .msgs { padding: 16px 20px 10px; }
+.desk .composer { padding: 10px 20px 16px; }
+.desk .b { max-width: min(68%, var(--luma-size-bubble-max)); }
+.pane-list-head { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px 6px; }
+.pane-list-head .t { font-family: var(--display); font-weight: 600; font-size: 20px; letter-spacing: -0.3px; }
+.sidebar { display: flex; flex-direction: column; gap: 2px; padding: 6px 10px; font-size: 13px; }
+.sidebar .grp { font-size: 11px; font-weight: 600; color: var(--luma-color-text-tertiary); padding: 10px 8px 4px; }
+.sidebar .it { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 6px; color: var(--luma-color-text); }
+.sidebar .it svg.i { width: 16px; height: 16px; color: var(--luma-color-text-secondary); }
+.sidebar .it.on { background: var(--luma-color-selection); }
+.sidebar .it .n { margin-left: auto; font-size: 12px; color: var(--luma-color-text-tertiary); font-variant-numeric: tabular-nums; }
+.rail { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 0; }
+.rail .it { width: 40px; height: 40px; display: grid; place-items: center; border-radius: var(--luma-radius-xs); color: var(--luma-color-text-secondary); position: relative; }
+.rail .it.on { background: var(--luma-color-selection); color: var(--luma-color-text); }
+.rail .it.on::before { content: ""; position: absolute; left: -4px; top: 12px; bottom: 12px; width: 3px; border-radius: 3px; background: var(--luma-color-lamp); }
+.rail .push { margin-top: auto; }
+.desk .row { padding: 10px 14px; }
+.desk .row + .row::before { left: 70px; }
+.desk .row .nm { font-size: 14px; } .desk .row .pv { font-size: 13px; } .desk .chat-head .name { font-size: 15px; }
+.desk .b { font-size: 14px; line-height: 20px; padding: 7px 12px; }
+
+/* States strip */
+.states { display: grid; grid-template-columns: 1fr; gap: 28px 20px; }
+@media (min-width: 640px) { .states { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 980px) { .states { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.state { display: grid; gap: 10px; align-content: start; }
+.state .frame { height: 380px; border: 1px solid var(--luma-color-hairline); border-radius: 20px; display: flex; flex-direction: column; }
+.state h3 { font-size: 16px; line-height: 21px; }
+.empty { flex: 1; display: grid; align-content: center; justify-items: start; gap: 10px; padding: 28px; }
+.empty .h { font-family: var(--display); font-size: 22px; font-weight: 600; letter-spacing: -0.3px; line-height: 28px; }
+.empty p { font-size: 14px; color: var(--luma-color-text-secondary); }
+.empty .cta { margin-top: 8px; display: inline-flex; align-items: center; gap: 8px; background: var(--luma-color-primary); color: var(--luma-color-on-primary); border-radius: var(--luma-radius-s); padding: 9px 14px; font-size: 14px; font-weight: 500; }
+.empty .cta svg.i { width: 16px; height: 16px; }
+.skel { display: grid; grid-template-columns: 44px 1fr; gap: 6px 12px; padding: 12px 16px; align-items: center; }
+.skel i { display: block; height: 10px; border-radius: 5px; background: var(--luma-color-surface-sunken); }
+.skel i:first-child { width: 44px; height: 44px; border-radius: 50%; grid-row: span 2; }
+.skel i:nth-child(2) { width: 46%; } .skel i:nth-child(3) { width: 78%; }
+
+/* Foundation */
+.found { display: grid; gap: 48px; }
+.swatches { display: grid; gap: 24px; }
+@media (min-width: 860px) { .swatches { grid-template-columns: 1fr 1fr; } }
+.swatch-col { border: 1px solid var(--luma-color-hairline); border-radius: 16px; overflow: hidden; background: var(--luma-color-surface); color: var(--luma-color-text); }
+.swatch-col h3 { padding: 16px 18px 10px; font-size: 16px; }
+.sw { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 8px 18px; border-top: 1px solid var(--luma-color-hairline); font-size: 13px; }
+.sw .chip { width: 40px; height: 28px; border-radius: 8px; box-shadow: inset 0 0 0 1px var(--luma-color-hairline); display: grid; place-items: center; font-size: 13px; font-weight: 600; }
+.sw .nm { font-weight: 500; }
+.sw .rl { color: var(--luma-color-text-tertiary); font-size: 12px; }
+.sw .cr { font-variant-numeric: tabular-nums; color: var(--luma-color-text-secondary); text-align: right; font-size: 12px; white-space: nowrap; }
+.typespec { display: grid; gap: 0; border-top: 1px solid var(--luma-color-hairline); }
+.ts { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 16px; align-items: baseline; padding: 14px 0; border-bottom: 1px solid var(--luma-color-hairline); }
+.ts .lab { font-size: 13px; color: var(--luma-color-text-tertiary); font-variant-numeric: tabular-nums; }
+.ts .lab b { display: block; color: var(--luma-color-text); font-weight: 500; }
+.ts .smp { min-width: 0; overflow-wrap: anywhere; }
+@media (max-width: 560px) { .ts { grid-template-columns: 1fr; gap: 4px; } }
+.grid2 { display: grid; gap: 40px; }
+@media (min-width: 860px) { .grid2 { grid-template-columns: 1fr 1fr; } }
+.scale { display: grid; gap: 8px; }
+.scale .s { display: grid; grid-template-columns: 70px 1fr; align-items: center; gap: 12px; font-size: 12px; color: var(--luma-color-text-tertiary); font-variant-numeric: tabular-nums; }
+.scale .s i { height: 10px; background: var(--luma-color-text); border-radius: 2px; display: block; }
+.radii { display: flex; flex-wrap: wrap; gap: 16px; }
+.radii .r { display: grid; gap: 6px; justify-items: start; font-size: 12px; color: var(--luma-color-text-tertiary); }
+.radii .r i { width: 72px; height: 52px; display: block; border: 1.5px solid var(--luma-color-text); }
+.receipts { display: flex; flex-wrap: wrap; gap: 28px; }
+.receipts .rcpt { display: grid; gap: 6px; justify-items: center; font-size: 13px; }
+.receipts .rcpt span { font-size: 12px; color: var(--luma-color-text-tertiary); }
+.receipts .rc { width: 22px; height: 22px; color: var(--luma-color-text); }
+.receipts .rc circle { stroke-width: 1.4; }
+.receipts .rcpt.bad .rc { color: var(--luma-color-danger); }
+.motion-demo { display: grid; gap: 16px; }
+@media (min-width: 860px) { .motion-demo { grid-template-columns: minmax(0, 1fr) 360px; align-items: start; } }
+.mtable { width: 100%; border-collapse: collapse; font-size: 14px; }
+.mtable td { padding: 10px 0; border-bottom: 1px solid var(--luma-color-hairline); vertical-align: top; }
+.mtable td:first-child { width: 38%; padding-right: 16px; font-weight: 500; }
+.mtable td:last-child { color: var(--luma-color-text-secondary); }
+.demo .frame { height: 420px; border: 1px solid var(--luma-color-hairline); border-radius: 20px; display: flex; flex-direction: column; }
+.demo-controls { display: flex; flex-wrap: wrap; gap: 8px; }
+.b.arriving { animation: rise 420ms cubic-bezier(.2, .9, .25, 1.06) both; transform-origin: bottom right; }
+@keyframes rise { from { transform: translateY(28px) scale(.96); opacity: .6; } to { transform: none; opacity: 1; } }
+.notes { display: grid; gap: 10px; font-size: 14px; color: var(--luma-color-text-secondary); }
+.notes li { max-width: 80ch; }
+@media (prefers-reduced-motion: reduce) {
+  .is-reconnecting .luma-line { animation: none; opacity: 1; }
+  .typing i { animation: none; opacity: .6; }
+  .b.arriving { animation: fade 90ms linear both; }
+  @keyframes fade { from { opacity: .6; } to { opacity: 1; } }
+}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></symbol>
+  <symbol id="i-back" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
+  <symbol id="i-arrow-back" viewBox="0 0 24 24"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></symbol>
+  <symbol id="i-up" viewBox="0 0 24 24"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></symbol>
+  <symbol id="i-clip" viewBox="0 0 24 24"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></symbol>
+  <symbol id="i-compose" viewBox="0 0 24 24"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.4 2.6a2.1 2.1 0 1 1 3 3L12 15l-4 1 1-4Z"/></symbol>
+  <symbol id="i-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></symbol>
+  <symbol id="i-more-v" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></symbol>
+  <symbol id="i-archive" viewBox="0 0 24 24"><rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+  <symbol id="i-chat" viewBox="0 0 24 24"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></symbol>
+  <symbol id="i-settings" viewBox="0 0 24 24"><path d="M20 7h-9"/><path d="M14 17H5"/><circle cx="17" cy="17" r="3"/><circle cx="7" cy="7" r="3"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h16"/></symbol>
+  <symbol id="i-file" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></symbol>
+  <symbol id="i-bell-off" viewBox="0 0 24 24"><path d="M8.7 3A6 6 0 0 1 18 8a21.3 21.3 0 0 0 .6 5"/><path d="M17 17H3s3-2 3-9a4.67 4.67 0 0 1 .3-1.7"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/><path d="m2 2 20 20"/></symbol>
+  <symbol id="i-person" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 0 0-16 0"/></symbol>
+</svg>
+
+<main class="page">
+  <header class="mast">
+    <div class="brand">
+      <svg viewBox="0 0 44 44" aria-hidden="true">
+        <circle cx="21" cy="23" r="17" fill="var(--luma-color-primary)"/>
+        <circle cx="34" cy="10" r="8.5" fill="var(--luma-color-ground)"/>
+        <circle cx="34" cy="10" r="5.5" fill="var(--luma-color-lamp)"/>
+      </svg>
+      <span class="wordmark">Luma</span>
+    </div>
+    <nav class="mast-nav" aria-label="Sections">
+      <a href="#thesis">Thesis</a><a href="#platforms">Platforms</a><a href="#states">States</a><a href="#motion">Motion</a><a href="#foundation">Foundation</a>
+    </nav>
+  </header>
+
+  <section class="thesis" id="thesis">
+    <div class="thesis-copy">
+      <h1>Your words are the light.</h1>
+      <p>Luma is named after the luminance channel, so hierarchy comes from lightness and almost never from hue. Messages you send are the inverse of the room around them: ink on a pale day, lit on a dark night. Everything else stays quiet.</p>
+      <p>The only color is a small amber lamp. It marks what needs your attention: unread messages and where you are. Someone who is online is lit too, with a thin halo in your own message color.</p>
+      <p class="fine">Design foundation for milestone 1. Every value on this page is read from design/tokens.json. Apple frames use Inter as a stand-in for SF Pro, and Windows uses Open Sans for Segoe UI Variable.</p>
+    </div>
+    <div class="phones" data-shot="thesis-phones">
+      <div class="frame ios phone luma-light" data-frame data-render="ios-chat" aria-label="iOS chat, light"></div>
+      <div class="frame ios phone luma-dark" data-frame data-render="ios-chat" aria-label="iOS chat, dark"></div>
+    </div>
+  </section>
+
+  <section id="platforms">
+    <div class="section-head">
+      <h2>One identity, five native interfaces</h2>
+      <p class="muted">Each platform keeps its own structure, navigation and type. They all share tokens, terms and behaviour.</p>
+      <div class="flip"><button class="btn" id="flip-themes" type="button">Flip frame themes</button><span id="flip-state">Showing the default theme per frame</span></div>
+    </div>
+
+    <div class="platform">
+      <div class="platform-head">
+        <h3>iOS and Android</h3>
+        <p class="muted">iOS keeps a large display-face title, an inset search field and a compose button in the navigation bar. Android keeps the Material 3 structure, with a top app bar and an extended action button in Luma's inversion. Dynamic color is off, so the identity holds.</p>
+      </div>
+      <div class="platform-row" data-shot="mobile-lists">
+        <div class="frame ios phone luma-light" data-frame data-render="ios-list" aria-label="iOS conversation list"></div>
+        <div class="frame android phone luma-dark" data-frame data-render="android-list" aria-label="Android conversation list"></div>
+      </div>
+    </div>
+
+    <div class="platform">
+      <div class="platform-head">
+        <h3>macOS</h3>
+        <p class="muted">A three-column split view: sidebar, list and conversation. The toolbar is unified with the title bar. Keyboard first: ⌘N new chat, ⌘F search, ⌘1 to ⌘9 jump to a conversation.</p>
+      </div>
+      <div class="scroll-x"><div class="frame mac window desk luma-light" data-frame data-render="mac" data-shot="macos" aria-label="macOS window"></div></div>
+    </div>
+
+    <div class="platform">
+      <div class="platform-head">
+        <h3>Windows</h3>
+        <p class="muted">A compact NavigationView rail with a list-detail layout. The backdrop is the ground tone, where Mica sits on Windows 11. Group chats show sender names and small avatars at the end of each run of messages.</p>
+      </div>
+      <div class="scroll-x"><div class="frame win window desk luma-dark" data-frame data-render="win" data-shot="windows" aria-label="Windows window"></div></div>
+    </div>
+
+    <div class="platform">
+      <div class="platform-head">
+        <h3>Linux</h3>
+        <p class="muted">Qt Quick with a custom Luma style, using the desktop's own UI font. Ctrl+K opens the quick switcher. Server-side window decorations are kept where the desktop provides them.</p>
+      </div>
+      <div class="scroll-x"><div class="frame linux window desk luma-light" data-frame data-render="linux" data-shot="linux" aria-label="Linux window"></div></div>
+    </div>
+  </section>
+
+  <section id="states">
+    <div class="section-head">
+      <h2>States</h2>
+      <p class="muted">Cached content always renders first. The luma line under the header carries connection state, and the words under it say exactly what is happening.</p>
+    </div>
+    <div class="states" data-shot="states">
+      <div class="state"><h3>No conversations</h3><div class="frame ios" data-render="state-empty"></div></div>
+      <div class="state"><h3>Loading</h3><div class="frame ios" data-render="state-loading"></div></div>
+      <div class="state"><h3>Reconnecting</h3><div class="frame ios" data-render="state-reconnecting"></div></div>
+      <div class="state"><h3>Offline</h3><div class="frame ios" data-render="state-offline"></div></div>
+      <div class="state"><h3>Couldn't send</h3><div class="frame ios" data-render="state-failed"></div></div>
+      <div class="state"><h3>New conversation</h3><div class="frame ios" data-render="state-new"></div></div>
+    </div>
+  </section>
+
+  <section id="motion">
+    <div class="section-head">
+      <h2>Motion</h2>
+      <p class="muted">Every animation explains a change. With reduced motion enabled, springs become short crossfades and the luma line holds still.</p>
+    </div>
+    <div class="motion-demo">
+      <table class="mtable">
+        <tbody>
+          <tr><td>Message sent</td><td>Rises from the composer into place on the send spring, from 0.6 opacity.</td></tr>
+          <tr><td>Message received</td><td>Fades in over 160 ms. If you have scrolled up, the list stays put and a pill offers the new messages.</td></tr>
+          <tr><td>Receipt changes</td><td>The circle fills over 240 ms: dashed while pending, an outline once sent, half lit when delivered, fully lit when read.</td></tr>
+          <tr><td>Connection</td><td>The luma line breathes over 1.6 s while reconnecting and holds steady when offline. When connected, it is invisible.</td></tr>
+          <tr><td>Typing</td><td>Three dots fade in turn, 160 ms apart. Nothing moves vertically.</td></tr>
+        </tbody>
+      </table>
+      <div class="demo" data-shot="motion-demo">
+        <div class="frame ios" id="demo-frame" data-render="demo"></div>
+        <div class="demo-controls" style="margin-top:12px">
+          <button class="btn btn-primary" id="demo-send" type="button">Send a message</button>
+          <button class="btn" id="demo-drop" type="button">Drop the connection</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="foundation" class="found">
+    <div class="section-head">
+      <h2>Foundation</h2>
+      <p class="muted">Contrast ratios are computed live from the tokens. Every text pairing meets WCAG AA in both themes.</p>
+    </div>
+    <div class="swatches" id="swatches" data-shot="swatches"></div>
+    <div>
+      <h3 style="margin-bottom:12px">Type</h3>
+      <div class="typespec" id="typespec"></div>
+    </div>
+    <div class="grid2">
+      <div><h3 style="margin-bottom:14px">Space</h3><div class="scale" id="space"></div></div>
+      <div style="display:grid;gap:28px;align-content:start">
+        <div><h3 style="margin-bottom:14px">Radii</h3><div class="radii" id="radii"></div></div>
+        <div><h3 style="margin-bottom:14px">Receipts</h3><div class="receipts" id="receipts"></div></div>
+      </div>
+    </div>
+    <div>
+      <h3 style="margin-bottom:12px">Rules this page holds itself to</h3>
+      <ul class="notes">
+        <li>The lamp appears only on unread badges and the selection marker. It is never used for text. Presence is a luminance halo, never amber.</li>
+        <li>No gradients, glass, glow or decorative cards. Hairlines and tonal steps do the separating, and the one shadow belongs to floating surfaces.</li>
+        <li>The display face is for titles and empty states. Body text uses each platform's own UI font, and times use tabular figures.</li>
+        <li>Bubbles have no tails. A run of messages from one sender tightens its inner corners to 6 px.</li>
+      </ul>
+    </div>
+  </section>
+</main>
+
+<script>
+const TOKENS = {"color":{"light":{"ground":"#F1F3F4","surface":"#FFFFFF","surfaceRaised":"#FFFFFF","surfaceSunken":"#E9EDEF","hairline":"#DDE2E5","text":"#0E1418","textSecondary":"#47525A","textTertiary":"#5F6A72","bubbleOut":"#141A1E","onBubbleOut":"#F2F5F6","bubbleOutMeta":"#A3ADB3","bubbleIn":"#E9EDEF","onBubbleIn":"#0E1418","bubbleInMeta":"#56616A","primary":"#141A1E","onPrimary":"#F2F5F6","lamp":"#F2AE2E","onLamp":"#1A1405","selection":"#E3E8EB","danger":"#B8322A","onDanger":"#FFFFFF","focusRing":"#0E1418","scrim":"#0E1418"},"dark":{"ground":"#0B0F12","surface":"#11161A","surfaceRaised":"#192025","surfaceSunken":"#0B0F12","hairline":"#232B31","text":"#ECF0F2","textSecondary":"#A7B1B8","textTertiary":"#86919A","bubbleOut":"#E8EDF0","onBubbleOut":"#0B0F12","bubbleOutMeta":"#4E5961","bubbleIn":"#1C2328","onBubbleIn":"#ECF0F2","bubbleInMeta":"#8E99A1","primary":"#E8EDF0","onPrimary":"#0B0F12","lamp":"#F5BC4C","onLamp":"#1A1405","selection":"#1E262B","danger":"#FF8277","onDanger":"#1A0705","focusRing":"#ECF0F2","scrim":"#000000"}},"contrastPairs":[["text","ground",4.5],["text","surface",4.5],["text","surfaceRaised",4.5],["text","selection",4.5],["textSecondary","ground",4.5],["textSecondary","surface",4.5],["textSecondary","selection",4.5],["textTertiary","surface",4.5],["textTertiary","ground",4.5],["onBubbleOut","bubbleOut",4.5],["bubbleOutMeta","bubbleOut",4.5],["onBubbleIn","bubbleIn",4.5],["bubbleInMeta","bubbleIn",4.5],["onPrimary","primary",4.5],["onLamp","lamp",4.5],["danger","surface",4.5],["onDanger","danger",4.5],["focusRing","surface",3],["focusRing","ground",3],["bubbleOut","surface",3],["hairline","surface",1.15]],"font":{"display":"Instrument Sans","ui":{"ios":"SF Pro","macos":"SF Pro","android":"Roboto Flex","windows":"Segoe UI Variable","linux":"system"}},"type":{"largeTitle":{"size":32,"lineHeight":38,"weight":600,"tracking":-0.6,"family":"display"},"title":{"size":22,"lineHeight":28,"weight":600,"tracking":-0.3,"family":"display"},"headline":{"size":16,"lineHeight":21,"weight":600,"tracking":-0.1,"family":"ui"},"body":{"size":16,"lineHeight":22,"weight":400,"tracking":0,"family":"ui"},"callout":{"size":15,"lineHeight":20,"weight":400,"tracking":0,"family":"ui"},"subhead":{"size":14,"lineHeight":19,"weight":400,"tracking":0,"family":"ui"},"footnote":{"size":13,"lineHeight":18,"weight":400,"tracking":0,"family":"ui"},"caption":{"size":12,"lineHeight":16,"weight":500,"tracking":0.1,"family":"ui","numeric":"tabular"}},"space":{"0":0,"1":2,"2":4,"3":8,"4":12,"5":16,"6":20,"7":24,"8":32,"9":40,"10":48,"11":64},"size":{"avatarS":28,"avatarM":44,"avatarL":56,"avatarXL":96,"hitMin":44,"row":72,"composerMin":44,"badge":20,"presenceDot":10,"lumaLine":2,"sidebar":264,"listPane":340,"bubbleMax":560},"radius":{"xs":6,"s":10,"m":14,"bubble":20,"bubbleJoined":6,"sheet":24,"pill":999},"elevation":{"overlay":{"y":12,"blur":32,"alpha":{"light":0.14,"dark":0.55}}},"motion":{"duration":{"instant":90,"quick":160,"standard":240,"emphasized":380,"lumaPulse":1600},"curve":{"standard":[0.2,0,0,1],"exit":[0.4,0,1,1]},"spring":{"send":{"response":0.35,"damping":0.82},"sheet":{"response":0.45,"damping":0.9}}}};
+
+const P = {
+  me: { n: 'You', i: 'YO' },
+  mira: { n: 'Mira Okafor', i: 'MO', on: true },
+  jonas: { n: 'Jonas Weber', i: 'JW' },
+  ana: { n: 'Ana Ruiz', i: 'AR' },
+  elif: { n: 'Elif Demir', i: 'ED', on: true },
+  dad: { n: 'Dad', i: 'D' },
+  theo: { n: 'Theo Lindqvist', i: 'TL' },
+  noor: { n: 'Noor Haddad', i: 'NH' },
+  felix: { n: 'Felix Brandt', i: 'FB' },
+};
+
+const LIST = [
+  { id: 'mira', who: 'mira', last: 'Already loaded a roll of Portra', t: '14:08', unread: 2 },
+  { id: 'climb', title: 'Saturday climbing', pair: ['J', 'A'], last: 'Ana: Perfect. Coffee after?', t: '13:51', unread: 5 },
+  { id: 'elif', who: 'elif', last: 'Let’s go see it Thursday', t: '12:41' },
+  { id: 'dad', who: 'dad', last: 'Landed. Call you from the hotel.', t: '11:02' },
+  { id: 'theo', who: 'theo', typing: true, t: '10:47' },
+  { id: 'release', title: 'Auralis release', pair: ['A', 'F'], last: 'Ana: Build 0.9 is on the test server', t: 'Yesterday', unread: 12, muted: true },
+  { id: 'noor', who: 'noor', last: 'You: Thanks, that helped a lot', t: 'Tue' },
+  { id: 'felix', who: 'felix', last: 'See you at the workshop', t: 'Mon' },
+];
+
+const CHATS = {
+  mira: [
+    { sep: 'Yesterday' },
+    { from: 'me', t: '21:16', rc: 'read', m: ['Found the lake from your photos. 40 minutes from mine'] },
+    { from: 'mira', t: '21:20', m: ['Told you it was close'] },
+    { sep: 'Today' },
+    { from: 'mira', t: '13:58', m: ['Are we still on for the lake on Sunday?', 'Forecast says 19° and clear after ten'] },
+    { from: 'me', t: '14:01', rc: 'read', m: ['Yes. I’ll pick you up at 9:30', 'Bring the film camera, the early light should be good'] },
+    { from: 'mira', t: '14:08', m: [{ file: 'lake-loop.gpx', size: '48 KB' }, 'Already loaded a roll of Portra'] },
+    { typing: 'mira' },
+  ],
+  climb: [
+    { sys: 'Jonas created the group' },
+    { from: 'jonas', t: '13:40', m: ['Wall opens at 10, I booked lane 4', 'Who’s bringing the rope?'] },
+    { from: 'ana', t: '13:44', m: ['I have the 60 m one'] },
+    { from: 'me', t: '13:46', rc: 'delivered', m: ['I’ll bring chalk and the guidebook'] },
+    { from: 'ana', t: '13:51', m: ['Perfect. Coffee after?'] },
+  ],
+  elif: [
+    { sep: 'Today' },
+    { from: 'elif', t: '12:12', m: ['Did the landlord send the new floor plan?'] },
+    { from: 'me', t: '12:30', rc: 'read', m: ['Yes, here it is', { file: 'flat-4b-floor-plan.pdf', size: '1.2 MB' }] },
+    { from: 'elif', t: '12:41', m: ['The second bedroom is bigger than I thought', 'Let’s go see it Thursday'] },
+  ],
+};
+
+const icon = (id, cls = 'i') => `<svg class="${cls}" aria-hidden="true"><use href="#i-${id}"/></svg>`;
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+function receipt(state) {
+  const label = { pending: 'Sending', sent: 'Sent', delivered: 'Delivered', read: 'Read', failed: 'Not sent' }[state];
+  let inner = '<circle cx="6" cy="6" r="4.6"/>';
+  if (state === 'pending') inner = '<circle cx="6" cy="6" r="4.6" stroke-dasharray="2.2 1.9"/>';
+  if (state === 'delivered') inner += '<path class="fillc" d="M6 1.4a4.6 4.6 0 0 0 0 9.2Z"/>';
+  if (state === 'read') inner = '<circle class="fillc" cx="6" cy="6" r="5.35"/>';
+  if (state === 'failed') inner = '<circle cx="6" cy="6" r="4.6"/><path d="M6 3.6v3" style="stroke:currentColor;stroke-width:1.5;stroke-linecap:round"/><circle class="fillc" cx="6" cy="8.6" r=".85"/>';
+  return `<svg class="rc" viewBox="0 0 12 12" role="img" aria-label="${label}">${inner}</svg>`;
+}
+
+function avatar(p, size = 44, dot = false) {
+  return `<span class="av ${dot && p.on ? 'online' : ''}" style="--s:${size}px" aria-hidden="true">${esc(p.i)}</span>`;
+}
+function pairAvatar(pair, size = 44) {
+  return `<span class="av pair" style="--s:${size}px" aria-hidden="true"><span>${pair[0]}</span><span>${pair[1]}</span></span>`;
+}
+
+function bubbles(msgs, opts = {}) {
+  return msgs.map((g) => {
+    if (g.sep) return `<div class="sep">${g.sep}</div>`;
+    if (g.sys) return `<div class="sys">${g.sys}</div>`;
+    if (g.typing) return `<div class="group"><div class="b typing" aria-label="${esc(P[g.typing].n)} is typing"><i></i><i></i><i></i></div></div>`;
+    const out = g.from === 'me';
+    const showAv = !out && opts.group;
+    const parts = g.m.map((m, i) => {
+      const last = i === g.m.length - 1;
+      const meta = last ? `<span class="meta">${g.t}${out ? receipt(g.rc || 'sent') : ''}</span>` : '';
+      const body = typeof m === 'string'
+        ? esc(m)
+        : `<span class="file"><span class="doc">${icon('file')}</span><span><span class="fn">${esc(m.file)}</span><br><span class="fs">${m.size}</span></span></span>`;
+      return `<div class="b">${body}${meta}</div>`;
+    }).join('');
+    const sender = showAv ? `<div class="sender">${esc(P[g.from].n.split(' ')[0])}</div>` : '';
+    const av = showAv ? avatar(P[g.from], 28) : '';
+    const grp = `<div class="group ${out ? 'out' : ''} ${g.failed ? 'failed' : ''}">${sender}${parts}</div>`;
+    return showAv ? `<div class="run">${av}${grp}</div>` : grp;
+  }).join('');
+}
+
+function chatHead(conv, platform) {
+  const c = LIST.find((x) => x.id === conv);
+  const p = c.who ? P[c.who] : null;
+  const name = p ? p.n : c.title;
+  const status = p ? (p.on ? 'Online' : 'Last seen 09:12') : '3 members';
+  if (platform === 'ios') {
+    return `<div class="chat-head"><span class="back">${icon('back')}Chats</span><span class="who"><span class="name">${esc(name)}</span><span class="status">${status}</span></span><span class="head-end">${p ? avatar(p, 32) : pairAvatar(c.pair, 32)}</span><span class="luma-line"></span></div>`;
+  }
+  return `<div class="chat-head">${p ? avatar(p, 36, true) : pairAvatar(c.pair, 36)}<span class="who"><span class="name">${esc(name)}</span><span class="status">${status}</span></span><span class="head-end" style="margin-left:auto;color:var(--luma-color-text-secondary)">${icon('search')}&nbsp;&nbsp;${icon('more')}</span><span class="luma-line"></span></div>`;
+}
+
+function composer(draft) {
+  return `<div class="composer"><div class="field">${icon('clip')}${draft ? `<span class="txt">${esc(draft)}</span><span class="send">${icon('up')}</span>` : '<span class="ph">Message</span>'}</div></div>`;
+}
+
+function rows(opts = {}) {
+  return LIST.map((c) => {
+    const p = c.who ? P[c.who] : null;
+    const av = p ? avatar(p, 44, true) : pairAvatar(c.pair);
+    const name = p ? p.n : c.title;
+    const preview = c.typing ? '<em>typing…</em>' : esc(c.last);
+    const sel = opts.selected === c.id;
+    const unread = sel ? 0 : c.unread;
+    const badge = unread ? `<span class="badge ${c.muted ? 'quiet' : ''}">${unread > 99 ? '99+' : unread}</span>` : '';
+    const mute = c.muted ? icon('bell-off', 'i muteic') : '';
+    const label = `${name}${unread ? `, ${unread} unread` : ''}, ${c.typing ? 'typing' : 'last message: ' + (c.last || '')}, ${c.t}`;
+    return `<div class="row ${sel ? 'sel' : ''}" role="listitem" aria-label="${esc(label)}">${av}<span class="nm">${esc(name)}${mute}</span><span class="tm">${c.t}</span><span class="pv">${preview}</span><span class="end">${badge}</span></div>`;
+  }).join('');
+}
+
+const statusbar = '<div class="statusbar"><span>9:41</span><span class="dots"><i></i><i></i></span></div>';
+const homebar = '<div class="homebar"><i></i></div>';
+
+const R = {
+  'ios-chat': () => `${statusbar}<div class="chat">${chatHead('mira', 'ios')}<div class="msgs">${bubbles(CHATS.mira)}</div>${composer('Perfect. See you Sunday')}</div>${homebar}`,
+  'ios-list': () => `${statusbar}<div class="ios-top"><span style="font-size:16px">Edit</span>${icon('compose')}</div><div class="ios-title">Chats</div><div class="search">${icon('search')}Search</div><div class="list" role="list">${rows()}</div>`,
+  'android-list': () => `${statusbar}<div class="m3-bar"><span class="t">Chats</span><span class="iconbtn">${icon('search')}</span><span class="iconbtn">${icon('more-v')}</span></div><div class="list" role="list" style="flex:1">${rows()}</div><div class="fab">${icon('compose')}New chat</div>${homebar}`,
+  mac: () => `<div class="titlebar"><span class="lights"><i></i><i></i><i></i></span></div>
+    <div class="panes">
+      <nav class="sidebar">
+        <span class="it on">${icon('chat')}Chats<span class="n">7</span></span>
+        <span class="it">${icon('archive')}Archived</span>
+        <span class="it">${icon('person')}Profile</span>
+        <span class="it">${icon('settings')}Settings</span>
+      </nav>
+      <div class="pane-list"><div class="pane-list-head"><span class="t">Chats</span>${icon('compose')}</div><div class="search">${icon('search')}Search<kbd>⌘F</kbd></div><div class="list" role="list">${rows({ selected: 'mira' })}</div></div>
+      <div class="pane-chat chat">${chatHead('mira', 'desk')}<div class="msgs">${bubbles(CHATS.mira)}</div>${composer('Perfect. See you Sunday')}</div>
+    </div>`,
+  win: () => `<div class="titlebar"><svg viewBox="0 0 44 44" width="16" height="16" aria-hidden="true"><circle cx="21" cy="23" r="17" fill="var(--luma-color-primary)"/><circle cx="34" cy="10" r="8.5" fill="var(--luma-color-ground)"/><circle cx="34" cy="10" r="5.5" fill="var(--luma-color-lamp)"/></svg><span>Luma</span>
+      <span class="caps"><span><svg viewBox="0 0 10 10"><path d="M0 5h10"/></svg></span><span><svg viewBox="0 0 10 10"><rect x=".5" y=".5" width="9" height="9"/></svg></span><span><svg viewBox="0 0 10 10"><path d="M0 0l10 10M10 0 0 10"/></svg></span></span></div>
+    <div class="panes">
+      <nav class="rail"><span class="it">${icon('menu')}</span><span class="it on">${icon('chat')}</span><span class="it">${icon('archive')}</span><span class="it push">${icon('settings')}</span></nav>
+      <div class="pane-list"><div class="pane-list-head"><span class="t">Chats</span>${icon('compose')}</div><div class="search">${icon('search')}Search<kbd>Ctrl+F</kbd></div><div class="list" role="list">${rows({ selected: 'climb' })}</div></div>
+      <div class="pane-chat chat">${chatHead('climb', 'desk')}<div class="msgs">${bubbles(CHATS.climb, { group: true })}</div>${composer('')}</div>
+    </div>`,
+  linux: () => `<div class="titlebar"><span style="flex:1"></span><span style="font-weight:600;color:var(--luma-color-text)">Luma</span><span style="flex:1"></span>
+      <span class="caps" style="margin-left:0"><span><svg viewBox="0 0 10 10"><path d="M1 3l4 4 4-4"/></svg></span><span><svg viewBox="0 0 10 10"><path d="M1 7l4-4 4 4"/></svg></span><span><svg viewBox="0 0 10 10"><path d="M1 1l8 8M9 1 1 9"/></svg></span></span></div>
+    <div class="panes">
+      <nav class="rail"><span class="it on">${icon('chat')}</span><span class="it">${icon('users')}</span><span class="it">${icon('archive')}</span><span class="it push">${icon('settings')}</span></nav>
+      <div class="pane-list"><div class="pane-list-head"><span class="t">Chats</span>${icon('compose')}</div><div class="search">${icon('search')}Search or jump to<kbd>Ctrl+K</kbd></div><div class="list" role="list">${rows({ selected: 'elif' })}</div></div>
+      <div class="pane-chat chat">${chatHead('elif', 'desk')}<div class="msgs">${bubbles(CHATS.elif)}</div>${composer('')}</div>
+    </div>`,
+  'state-empty': () => `<div class="empty"><div class="h">No conversations yet</div><p>Start one with someone’s username.</p><span class="cta">${icon('compose')}New conversation</span></div>`,
+  'state-loading': () => `<div class="chat is-reconnecting" style="flex:none"><div class="chat-head" style="padding:12px 16px"><span class="who"><span class="name" style="font-family:var(--display);font-size:20px">Chats</span></span><span class="luma-line"></span></div></div><div class="list">${'<div class="skel"><i></i><i></i><i></i></div>'.repeat(5)}</div>`,
+  'state-reconnecting': () => `<div class="chat is-reconnecting">${chatHead('mira', 'ios')}<div class="conn-note">Reconnecting in 4 s</div><div class="msgs">${bubbles(CHATS.mira.slice(4, 6))}</div>${composer('')}</div>`,
+  'state-offline': () => `<div class="chat is-offline">${chatHead('mira', 'ios')}<div class="conn-note">Offline. Messages will send when you’re back.</div><div class="msgs">${bubbles([CHATS.mira[5], { from: 'me', t: '14:12', rc: 'pending', m: ['Leaving now'] }])}</div>${composer('')}</div>`,
+  'state-failed': () => `<div class="chat">${chatHead('mira', 'ios')}<div class="msgs">${bubbles([CHATS.mira[6], { from: 'me', t: '14:12', rc: 'failed', failed: true, m: ['See you Sunday'] }])}<div class="fail-note" style="align-self:flex-end">Couldn’t send. Tap to retry.</div></div>${composer('')}</div>`,
+  'state-new': () => `<div class="chat">${chatHead('noor', 'ios')}<div class="empty" style="justify-items:center;text-align:center"><span class="av" style="--s:72px">NH</span><div class="h">Say hello to Noor</div><p>Messages you send appear here.</p></div>${composer('')}</div>`,
+  demo: () => `<div class="chat" id="demo-chat">${chatHead('mira', 'ios')}<div class="conn-note" id="demo-note" hidden>Reconnecting in 2 s</div><div class="msgs" id="demo-msgs">${bubbles(CHATS.mira.slice(4, 7))}</div>${composer('')}</div>`,
+};
+
+document.querySelectorAll('[data-render]').forEach((el) => { el.innerHTML = R[el.dataset.render](); });
+
+/* Theme flip for platform frames */
+let flipped = false;
+document.getElementById('flip-themes').addEventListener('click', () => {
+  flipped = !flipped;
+  document.querySelectorAll('[data-frame]').forEach((f) => {
+    f.classList.toggle('luma-light'); f.classList.toggle('luma-dark');
+  });
+  document.getElementById('flip-state').textContent = flipped ? 'Showing the opposite theme per frame' : 'Showing the default theme per frame';
+});
+
+/* Motion demo */
+const demoReplies = ['On my way', 'Coffee first?', 'Ten minutes out', 'Here'];
+let demoN = 0;
+document.getElementById('demo-send').addEventListener('click', () => {
+  const msgs = document.getElementById('demo-msgs');
+  const text = demoReplies[demoN++ % demoReplies.length];
+  const now = new Date();
+  const t = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  const g = document.createElement('div');
+  g.className = 'group out';
+  g.innerHTML = `<div class="b arriving">${esc(text)}<span class="meta">${t}${receipt('pending')}</span></div>`;
+  msgs.appendChild(g);
+  while (msgs.children.length > 5) msgs.firstElementChild.remove();
+  const chat = document.getElementById('demo-chat');
+  const steps = chat.classList.contains('is-reconnecting') ? [] : [['sent', 500], ['delivered', 1300], ['read', 2400]];
+  steps.forEach(([s, ms]) => setTimeout(() => { const m = g.querySelector('.meta'); m.lastElementChild.outerHTML = receipt(s); }, ms));
+});
+document.getElementById('demo-drop').addEventListener('click', (e) => {
+  const chat = document.getElementById('demo-chat');
+  const on = chat.classList.toggle('is-reconnecting');
+  document.getElementById('demo-note').hidden = !on;
+  e.currentTarget.textContent = on ? 'Restore the connection' : 'Drop the connection';
+});
+
+/* Foundation, from tokens */
+(function foundation() {
+  const T = TOKENS;
+  if (!T) return;
+  const lum = (hex) => { const n = parseInt(hex.slice(1), 16); return [n >> 16, (n >> 8) & 255, n & 255].map((c) => { c /= 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; }).reduce((a, c, i) => a + c * [0.2126, 0.7152, 0.0722][i], 0); };
+  const ratio = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05); };
+  const roles = {
+    ground: 'Window background', surface: 'Lists and conversation', surfaceRaised: 'Menus and sheets', surfaceSunken: 'Inputs and avatars',
+    hairline: 'Dividers', text: 'Primary text', textSecondary: 'Previews, subtitles', textTertiary: 'Times, hints',
+    bubbleOut: 'Your messages', onBubbleOut: 'Text on your messages', bubbleOutMeta: 'Time and receipt on yours',
+    bubbleIn: 'Their messages', onBubbleIn: 'Text on theirs', bubbleInMeta: 'Time on theirs',
+    primary: 'Primary action', onPrimary: 'Text on primary', lamp: 'Unread, selection', onLamp: 'Text on the lamp',
+    selection: 'Selected row', danger: 'Errors, failed sends', onDanger: 'Text on danger', focusRing: 'Keyboard focus', scrim: 'Behind modals',
+  };
+  const pairFor = (name) => T.contrastPairs.find((p) => p[0] === name);
+  const col = (theme, label) => {
+    const c = T.color[theme];
+    const items = Object.keys(c).map((k) => {
+      const pair = pairFor(k);
+      const cr = pair ? `${ratio(c[pair[0]], c[pair[1]]).toFixed(1)} on ${pair[1]}` : '';
+      const chipText = pair && pair[0] !== pair[1] ? `<span style="color:${c[k]}">Aa</span>` : '';
+      const chipBg = pair ? c[pair[1]] : c[k];
+      return `<div class="sw"><span class="chip" style="background:${chipBg}">${chipText}</span><span><span class="nm">${k}</span> <span class="rl">${c[k]}</span><br><span class="rl">${roles[k] || ''}</span></span><span class="cr">${cr}</span></div>`;
+    }).join('');
+    return `<div class="swatch-col luma-${theme}"><h3>${label}</h3>${items}</div>`;
+  };
+  document.getElementById('swatches').innerHTML = col('light', 'Light') + col('dark', 'Dark');
+
+  const samples = {
+    largeTitle: 'Chats', title: 'Saturday climbing', headline: 'Mira Okafor', body: 'Bring the film camera, the early light should be good',
+    callout: 'Start one with someone’s username.', subhead: 'Already loaded a roll of Portra', footnote: 'Reconnecting in 4 s', caption: '14:08  13:51  09:12  99+',
+  };
+  document.getElementById('typespec').innerHTML = Object.entries(T.type).map(([k, v]) =>
+    `<div class="ts"><span class="lab"><b>${k}</b>${v.size}/${v.lineHeight} · ${v.weight}</span><span class="smp" style="font-family:${v.family === 'display' ? 'var(--display)' : 'var(--page-font)'};font-size:${v.size}px;line-height:${v.lineHeight}px;font-weight:${v.weight};letter-spacing:${v.tracking}px;${v.numeric ? 'font-variant-numeric:tabular-nums;' : ''}">${samples[k]}</span></div>`).join('');
+
+  document.getElementById('space').innerHTML = Object.entries(T.space).filter(([, v]) => v > 0).map(([k, v]) =>
+    `<div class="s"><span>space.${k}  ${v}</span><i style="width:${v * 3}px"></i></div>`).join('');
+  document.getElementById('radii').innerHTML = Object.entries(T.radius).map(([k, v]) =>
+    `<div class="r"><i style="border-radius:${Math.min(v, 26)}px"></i>${k} ${v > 100 ? 'pill' : v}</div>`).join('');
+  document.getElementById('receipts').innerHTML = ['pending', 'sent', 'delivered', 'read', 'failed'].map((s) =>
+    `<div class="rcpt ${s === 'failed' ? 'bad' : ''}">${receipt(s)}<span>${{ pending: 'Sending', sent: 'Sent', delivered: 'Delivered', read: 'Read', failed: 'Not sent' }[s]}</span></div>`).join('');
+})();
+</script>

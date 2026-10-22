@@ -5,7 +5,8 @@ import QtQuick
 QtObject {
     property bool dark: false
     readonly property string displayFont: "Instrument Sans"
-    readonly property string uiFont: "Inter"
+    // Empty means the platform theme's UI font (Noto Sans on KDE, Cantarell on GNOME).
+    readonly property string uiFont: ""
 
     readonly property color ground: dark ? "#0B0F12" : "#F1F3F4"
     readonly property color surface: dark ? "#11161A" : "#FFFFFF"

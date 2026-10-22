@@ -12,9 +12,12 @@ The interface is almost achromatic: cool mineral greys with a faint blue-green c
 - **Your words are the light.** Messages you send use `bubbleOut`, the luminance inverse of the ground. They
   are deep ink in light mode and lit near-white in dark mode. Received messages use `bubbleIn`, a quiet tonal step.
   Primary buttons use the same inversion (`primary` / `onPrimary`), so "your action" always looks like "your voice".
-- **The lamp.** `lamp` (amber) is the only chromatic color. It works like an indicator lamp on an instrument.
-  It may appear only on: the unread badge, the presence dot, and the selected-conversation marker.
-  At most three kinds of lamp per screen; never as text color, never as a large fill, never decorative.
+- **The lamp.** `lamp` (amber) is the only chromatic color. It works like an indicator lamp on an instrument and means
+  "needs your attention". It may appear only on the unread badge and the selected-conversation marker.
+  It is never a text color, never a large fill, never decorative.
+- **Presence is luminance too.** Someone who is online has a halo: a 1.5px `primary` ring around the avatar, separated
+  by a 2px `surface` gap. Amber isn't used for presence because other apps use it to mean "away", and because it
+  would compete with unread badges on the same row.
 - **The luma line.** A 2px line (`size.lumaLine`) under the conversation header shows connection state.
   Connected: invisible. Connecting or reconnecting: it breathes (opacity 0.25 → 1, `duration.lumaPulse`, standard curve).
   Offline: steady `textTertiary` with a text status. This is Luma's one signature motion.
@@ -28,7 +31,7 @@ The interface is almost achromatic: cool mineral greys with a faint blue-green c
 | Display | `largeTitle`, `title` | Instrument Sans (bundled, OFL) | Screen titles, wordmark, empty-state headings, profile names |
 | UI | `headline` … `caption` | Platform system font | Everything else |
 
-- UI faces: SF Pro (iOS, macOS), Roboto Flex (Android), Segoe UI Variable (Windows), Inter (Linux, bundled).
+- UI faces: SF Pro (iOS, macOS), Roboto Flex (Android), Segoe UI Variable (Windows), and the desktop font on Linux (Noto Sans on KDE, Cantarell on GNOME, via the Qt platform theme).
   Each platform's own face keeps text native. The display face carries the identity.
 - `caption` uses tabular figures (timestamps, counts, seq-ordered lists) so numbers don't jitter. No monospace in the UI.
 - Sentence case everywhere. No all-caps labels and no letter-spaced eyebrows.
@@ -109,13 +112,14 @@ Each platform uses its native symbol set, at a 1.5px stroke equivalent. The sema
 | group | `person.2` | `group` | `people` | `users` |
 
 Receipts follow the luminance idea: pending is an outline circle, delivered is half lit, read is fully lit.
-They are drawn in `bubbleOutMeta`, and failed is drawn in `danger`.
+They are drawn in `bubbleOutMeta`, including the failed glyph, because `danger` on an ink or lit bubble fails contrast.
+The red belongs to the "Couldn't send. Tap to retry." note under the bubble, which sits on `surface`.
 The app icon is the one custom glyph: a lit disc partly eclipsed by an ink disc, on `ground`.
 
 ## 7. Components
 
 **Conversation row**
-- Anatomy: a 44 avatar with an optional presence dot (lamp, ringed in `surface`), then the name (`headline`),
+- Anatomy: a 44 avatar with an optional presence halo, then the name (`headline`),
   the time (`caption`, tabular, right-aligned), the preview (`subhead`, `textSecondary`, one line), and the unread badge (lamp).
 - States: default, hover (`selection` at 60%, desktop only), selected (`selection` plus a 3px lamp marker on the leading edge),
   muted (bell-slash, and the badge becomes `textTertiary` outline), focused (2px `focusRing`, inset 2).
@@ -165,7 +169,7 @@ The app icon is the one custom glyph: a lit disc partly eclipsed by an ink disc,
 - [ ] Full keyboard operation on desktop, with a visible `focusRing` (2px, offset 2).
 - [ ] Text scaling to 200% without clipping message text.
 - [ ] Reduced motion and reduced transparency respected.
-- [ ] State is never conveyed by color alone. The lamp dot always has a text equivalent (header "Online", row label).
+- [ ] State is never conveyed by color alone. The presence halo and the lamp always have a text equivalent (header "Online", row label).
 - [ ] Hit targets meet the minimum size.
 
 ## 10. References, and what each one is used for

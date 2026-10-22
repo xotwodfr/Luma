@@ -23,7 +23,7 @@ function css(t) {
       `  --luma-type-${kebab(k)}-tracking: ${v.tracking}px;`,
     ]),
     `  --luma-font-display: "${t.font.display}", system-ui, sans-serif;`,
-    `  --luma-font-ui: "${t.font.ui.linux}", system-ui, sans-serif;`,
+    `  --luma-font-ui: system-ui, sans-serif;`,
     ...entries(t.motion.duration).map(([k, v]) => `  --luma-duration-${kebab(k)}: ${v}ms;`),
     ...entries(t.motion.curve).map(([k, v]) => `  --luma-curve-${kebab(k)}: cubic-bezier(${v.join(', ')});`),
   ].join('\n');
@@ -47,6 +47,17 @@ ${vars('dark').replace(/^/gm, '  ')}
 :root[data-theme="dark"] {
 ${vars('dark')}
 ${shadow('dark')}
+}
+/* Scoped themes, for showing both side by side regardless of the page theme. */
+.luma-light {
+${vars('light')}
+${shadow('light')}
+  color-scheme: light;
+}
+.luma-dark {
+${vars('dark')}
+${shadow('dark')}
+  color-scheme: dark;
 }
 `;
 }
@@ -220,7 +231,8 @@ import QtQuick
 QtObject {
     property bool dark: false
     readonly property string displayFont: "${t.font.display}"
-    readonly property string uiFont: "${t.font.ui.linux}"
+    // Empty means the platform theme's UI font (Noto Sans on KDE, Cantarell on GNOME).
+    readonly property string uiFont: ""
 
 ${colors}
 

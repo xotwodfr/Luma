@@ -20,6 +20,9 @@ test('emits every platform file with accent values, spacing and header', () => {
     assert.match(src, /[^0-9.]16[^0-9.]/, `${f} space 16`);
   }
   assert.match(readFileSync(join(dir, 'qmldir'), 'utf8'), /singleton LumaTokens/);
+  const css = readFileSync(join(dir, 'luma-tokens.css'), 'utf8');
+  assert.match(css, /\.luma-light \{[^}]*--luma-color-ground: #F1F3F4/);
+  assert.match(css, /\.luma-dark \{[^}]*--luma-color-ground: #0B0F12/);
 });
 
 test('output is deterministic', () => {
