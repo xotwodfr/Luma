@@ -60,7 +60,8 @@ func New(d Deps) *App {
 		d.AuthPerMinute = 10
 	}
 	authH := &auth.Handlers{Svc: a.Auth, Limit: httpx.NewLimiter(d.AuthPerMinute, time.Minute),
-		AccountLimit: httpx.NewLimiter(30, time.Hour), TrustedProxies: d.Config.TrustedProxies}
+		AccountLimit: httpx.NewLimiter(30, time.Hour), KnownAccountLimit: httpx.NewLimiter(100, time.Hour),
+		TrustedProxies: d.Config.TrustedProxies}
 	lookupLimit := httpx.NewLimiter(60, time.Minute)
 	usersH := &users.Handlers{Svc: a.Users, LookupLimit: lookupLimit}
 	// One send bucket per user, shared by REST and WebSocket so neither path bypasses it.

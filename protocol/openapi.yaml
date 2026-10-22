@@ -46,8 +46,8 @@ paths:
       summary: Exchange credentials for a session token
       description: |
         Unknown usernames and wrong passwords get identical responses and timing. 10 attempts per minute per
-        client IP; also 30 per hour per username from addresses that never held a session for that account
-        (429 with Retry-After), applied identically to unknown usernames.
+        client IP; also, per username, 30 per hour from addresses that never held a session for that account
+        and 100 per hour from known addresses (429 with Retry-After). Unknown usernames behave the same.
       security: []
       requestBody:
         required: true

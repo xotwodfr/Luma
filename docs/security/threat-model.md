@@ -26,8 +26,8 @@ the other services on the same host*; backups.
 
 | | Threat | Mitigation | Proof |
 |---|---|---|---|
-| S | Guessing passwords | Argon2id; per-IP 10/min **and** per-username 30/h from addresses that never held a session for that account (can't be bypassed by rotating or forging IPs); dummy verify for unknown users | `TestLogin_RateLimited`, `TestLogin_PerAccountLimit`, `TestLogin_EnumerationSafe` [api] |
-| D | Locking someone out by failing their login on purpose | The per-username ceiling never applies from the owner's known addresses (found in review) | `TestLogin_PerAccountLimit` [api] |
+| S | Guessing passwords | Argon2id; per-IP 10/min **and** per-username 30/h from addresses that never held a session for that account and 100/h from known ones (no address, forged or not, gets unlimited guesses); dummy verify for unknown users | `TestLogin_RateLimited`, `TestLogin_PerAccountLimit`, `TestLogin_EnumerationSafe` [api] |
+| D | Locking someone out by failing their login on purpose | Known addresses use a separate per-username bucket, so strangers can't exhaust it without knowing (and forging) the owner's IP (found in review). A device-bound login secret would remove the IP dependence; not in v1 | `TestLogin_PerAccountLimit` [api] |
 | S | Stolen/forged token | 256-bit random, stored as SHA-256 only, 90-day idle expiry, revocable; revocation closes sockets within 1 s, also across processes | `TestAuth_MalformedTokens`, `TestSession_SlidingExpiry`, `TestSessions_RevokeAndPasswordChange`, `TestRealtime_RevokeClosesSocket`, `TestRealtime_RevokeFromOtherProcessClosesSocket`, `TestRealtime_NoSendsAcceptedAfterRevoke` [api] |
 | T | Malformed / oversized input | JSON ≤ 128 KiB, unknown fields rejected; text ≤ 8000 chars; client `meta` rejected except `{file_id}` on file messages | `TestBodyLimits`, `TestSend_Validation` [api/chat], `TestFiles_AttachRules` [api] |
 | R | User denies an action | Group changes are recorded as system messages (`actor` in meta) in the conversation itself; access log has request id, route, status and user id | `TestGroups_FanOutFollowsMembership` [chat], `TestLogs_NoSecrets` [api] |

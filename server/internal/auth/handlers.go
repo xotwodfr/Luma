@@ -12,13 +12,15 @@ import (
 
 // Handlers exposes the auth service over HTTP. Limit throttles credential endpoints per client IP;
 // AccountLimit throttles login attempts per username from addresses new to that account, so
-// guessing one password stays slow even if client IPs are spoofed or rotated, while the owner's
-// known addresses are never locked out. Unknown usernames behave like known ones from new addresses.
+// guessing one password stays slow even if client IPs are spoofed or rotated; known addresses
+// have their own larger bucket. Unknown usernames behave like known ones from new addresses.
 type Handlers struct {
-	Svc            *Service
-	Limit          *httpx.Limiter
-	AccountLimit   *httpx.Limiter
-	TrustedProxies []netip.Prefix
+	Svc          *Service
+	Limit        *httpx.Limiter
+	AccountLimit *httpx.Limiter
+	// KnownAccountLimit is the per-username bucket for addresses that held a session before.
+	KnownAccountLimit *httpx.Limiter
+	TrustedProxies    []netip.Prefix
 }
 
 func (h *Handlers) device(r *http.Request, name, platform string) Device {
@@ -62,14 +64,19 @@ func (h *Handlers) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	dev := h.device(r, in.DeviceName, in.Platform)
-	// The per-username ceiling applies only from addresses that never held a session for this
-	// account, so an attacker can't lock the owner out from their usual networks.
+	// Two per-username buckets: a strict one for addresses that never held a session for this
+	// account, and a larger but finite one for known addresses. Strangers can't lock the owner out
+	// of their usual networks, and a forged "known" IP still can't guess without limit.
 	known, err := h.Svc.KnownIP(r.Context(), in.Username, dev.IP)
 	if err != nil {
 		httpx.Fail(w, r, err)
 		return
 	}
-	if !known && !h.AccountLimit.Limit(w, NormalizeUsername(in.Username)) {
+	bucket := h.AccountLimit
+	if known {
+		bucket = h.KnownAccountLimit
+	}
+	if !bucket.Limit(w, NormalizeUsername(in.Username)) {
 		return
 	}
 	token, u, err := h.Svc.Login(r.Context(), in.Username, in.Password, dev)

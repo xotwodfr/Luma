@@ -301,8 +301,9 @@ func TestHealth(t *testing.T) {
 	}
 }
 
-// Per-account login throttle: applies from addresses new to the account, so an attacker can't
-// lock the owner out (review finding), and treats unknown usernames exactly like known ones.
+// Per-account login throttle: strict from addresses new to the account (unknown usernames alike),
+// larger but finite from known addresses, so strangers can't lock the owner out and a forged
+// known IP can't guess without limit (review findings).
 func TestLogin_PerAccountLimit(t *testing.T) {
 	h := newHarness(t, func(d *api.Deps) { // per-IP limit relaxed; forwarded IPs trusted from loopback
 		d.Config.TrustedProxies = []netip.Prefix{netip.MustParsePrefix("127.0.0.0/8")}
@@ -332,5 +333,16 @@ func TestLogin_PerAccountLimit(t *testing.T) {
 	}
 	if st := login("alice", "password-alice", "198.51.100.1"); st != 200 {
 		t.Fatalf("the owner from a known address was locked out: %d", st)
+	}
+	// A known address (possibly forged) still has a finite bucket: 100/hour, one already used.
+	limited := -1
+	for i := 0; i < 101; i++ {
+		if st := login("alice", "wrong-password", "198.51.100.1"); st == 429 {
+			limited = i
+			break
+		}
+	}
+	if limited != 99 {
+		t.Fatalf("known-address bucket throttled at attempt %d, want 99", limited)
 	}
 }
