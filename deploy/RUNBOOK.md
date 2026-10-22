@@ -145,8 +145,8 @@ closes live sockets within a second, and makes the account invisible to lookups 
 
 ## Recorded restore test
 
-Run 2026-10-22 12:51 UTC, `LUMA_TAG=76b8f13 deploy/test-restore.sh`, image built from commit `76b8f13`
-(the security-review fixes). Compose progress lines omitted; `$WORK` is a throwaway directory.
+Run 2026-10-22 ~12:56 UTC, `LUMA_TAG=02549b5 deploy/test-restore.sh`, image built from commit `02549b5`
+(includes all security-review fixes). Compose progress lines omitted; `$WORK` is a throwaway directory.
 
 ```
 == throwaway age key and staging env ($WORK)
@@ -156,7 +156,7 @@ preflight for project luma_staging
   ok    env file is mode 600
   ok    POSTGRES_PASSWORD is set and URL-safe
   ok    LUMA_BACKUP_RECIPIENT is an age public key
-  ok    image luma-server:76b8f13 exists
+  ok    image luma-server:02549b5 exists
   ok    image luma-backup exists
   ok    port 127.0.0.1:8791 is free
   ok    volume luma_staging_pgdata does not exist yet and will be created
@@ -175,21 +175,21 @@ source:   users=3 conversations=2 members=5 messages=29 files=3 user_events=87 m
 source files on disk: 3
 
 == backup
-backup $WORK/backups/luma-20261022T125109Z: 52K
+backup $WORK/backups/luma-20261022T125442Z: 52K
 total 52
--rw------- 1 folkes folkes 34385 Oct 22 12:51 luma-20261022T125109Z.dump.age
--rw------- 1 folkes folkes   201 Oct 22 12:51 luma-20261022T125109Z.sha256
--rw------- 1 folkes folkes  9416 Oct 22 12:51 luma-20261022T125109Z.uploads.tar.age
+-rw------- 1 folkes folkes 34398 Oct 22 12:54 luma-20261022T125442Z.dump.age
+-rw------- 1 folkes folkes   201 Oct 22 12:54 luma-20261022T125442Z.sha256
+-rw------- 1 folkes folkes  9416 Oct 22 12:54 luma-20261022T125442Z.uploads.tar.age
 dump is encrypted (no plaintext message bodies)
 
 == restore into luma_restore_test
-restored $WORK/backups/luma-20261022T125109Z into luma_restore_test (127.0.0.1:8792)
+restored $WORK/backups/luma-20261022T125442Z into luma_restore_test (127.0.0.1:8792)
 
 == compare
 restored: users=3 conversations=2 members=5 messages=29 files=3 user_events=87 max_seq=24 migration=4
 database counts match
 upload files match byte for byte (3 files, sha256)
-verified via API: history {'4239d31e-ee15-499f-b871-d8459384241e': 24, 'f673c356-8f77-4a54-aa4c-1e6b87906430': 5}, 3 files byte-identical, window enforced, search ok
+verified via API: history {'86a00ad6-d22b-42eb-8d6b-e988ab9d83be': 24, 'd28c6bdd-239f-41f2-ade7-26198b988f3b': 5}, 3 files byte-identical, window enforced, search ok
 
 == tampered backup is refused
 checksum mismatch detected, nothing restored
