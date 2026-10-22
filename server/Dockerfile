@@ -6,9 +6,12 @@ RUN go mod download
 COPY . .
 ARG VERSION=dev
 RUN CGO_ENABLED=0 go build -trimpath -ldflags "-s -w" -o /out/luma-server ./cmd/luma-server
+# A new named volume copies this directory's owner, so uploads are writable by nonroot.
+RUN mkdir -p /out/data/uploads && chmod 700 /out/data/uploads
 
 FROM gcr.io/distroless/static-debian12:nonroot
 COPY --from=build /out/luma-server /luma-server
+COPY --from=build --chown=65532:65532 /out/data /data
 USER nonroot:nonroot
 ENV LUMA_LISTEN=:8790 LUMA_UPLOAD_DIR=/data/uploads
 EXPOSE 8790

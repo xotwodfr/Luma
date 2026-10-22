@@ -1,0 +1,59 @@
+# Luma production stack. Isolated from everything else on the host: its own project, network
+# and luma_* volumes; no host ports except the server on loopback. Production:
+#
+#   LUMA_TAG=$(git rev-parse --short HEAD) docker compose -p luma --env-file deploy/.env -f deploy/compose.yaml up -d
+#
+# Scratch projects (luma_staging, luma_restore_test) use the same file with another -p,
+# env file, LUMA_PORT and LUMA_SUBNET. Volumes are named <project>_pgdata / <project>_uploads.
+# Never run `down -v` or `docker volume rm` against project luma (see RUNBOOK.md).
+name: luma
+
+services:
+  luma-postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: luma
+      POSTGRES_DB: luma
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in the env file}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    security_opt: [no-new-privileges:true]
+    healthcheck:
+      # TCP, not the socket: the first-run init server listens only on the socket.
+      test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-U", "luma", "-d", "luma"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  luma-server:
+    image: luma-server:${LUMA_TAG:?set LUMA_TAG to the image tag (git SHA)}
+    restart: unless-stopped
+    depends_on:
+      luma-postgres: { condition: service_healthy }
+    environment:
+      # POSTGRES_PASSWORD must be URL-safe (the example generates hex).
+      LUMA_DATABASE_URL: postgres://luma:${POSTGRES_PASSWORD}@luma-postgres:5432/luma?sslmode=disable
+      LUMA_PUBLIC_URL: ${LUMA_PUBLIC_URL:-https://chat.folk3s.com}
+      LUMA_REGISTRATION: ${LUMA_REGISTRATION:-invite}
+      LUMA_MAX_UPLOAD_BYTES: ${LUMA_MAX_UPLOAD_BYTES:-26214400}
+      # Host connections to the published port (Caddy) arrive from the bridge gateway.
+      LUMA_TRUSTED_PROXY: ${LUMA_GATEWAY:-172.16.79.1}
+    ports:
+      - "127.0.0.1:${LUMA_PORT:-8790}:8790"
+    volumes:
+      - uploads:/data/uploads
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: ${LUMA_SUBNET:-172.16.79.0/24}
+          gateway: ${LUMA_GATEWAY:-172.16.79.1}
+
+volumes:
+  pgdata: {}
+  uploads: {}

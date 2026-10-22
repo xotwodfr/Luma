@@ -1,2 +1,7 @@
 server/luma-server
 *.test
+deploy/.env
+deploy/.env.*
+!deploy/.env.example
+*.key
+__pycache__/

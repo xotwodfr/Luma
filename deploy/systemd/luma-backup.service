@@ -1,0 +1,15 @@
+[Unit]
+Description=Luma encrypted backup (pg_dump + uploads, age-encrypted, 14-day retention)
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+# Root: needs the docker socket and writes /var/backups/luma (mode 700).
+Environment=LUMA_PROJECT=luma
+Environment=LUMA_ENV_FILE=/home/folkes/Projects/Luma/deploy/.env
+Environment=LUMA_BACKUP_DIR=/var/backups/luma
+ExecStart=/home/folkes/Projects/Luma/deploy/backup.sh
+NoNewPrivileges=yes
+PrivateTmp=yes
+UMask=0077
