@@ -66,8 +66,10 @@ func (h *Handlers) Login(w http.ResponseWriter, r *http.Request) {
 	}
 	dev := h.device(r, in.DeviceName, in.Platform)
 	// A strict per-username bucket for addresses that never held a session for this account, and
-	// a larger but finite bucket per (username, known address) under a per-username total. Strangers can't lock the owner out
-	// of their usual networks, and a forged "known" IP still can't guess without limit.
+	// a larger but finite bucket per (username, known address) under a per-username total.
+	// Trade-off: attempts from new addresses can never block the owner's known ones, but someone
+	// who can forge at least three of the owner's known IPs can exhaust the total for an hour.
+	// No address, or spelling of one, gets unlimited guesses. A device-bound credential would remove this.
 	known, err := h.Svc.KnownIP(r.Context(), in.Username, dev.IP)
 	if err != nil {
 		httpx.Fail(w, r, err)
