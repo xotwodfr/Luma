@@ -46,7 +46,7 @@ type statusWriter struct {
 	status int
 }
 
-func (w *statusWriter) WriteHeader(s int) { w.status = s; w.ResponseWriter.WriteHeader(s) }
+func (w *statusWriter) WriteHeader(s int)           { w.status = s; w.ResponseWriter.WriteHeader(s) }
 func (w *statusWriter) Unwrap() http.ResponseWriter { return w.ResponseWriter }
 
 // userSlot lets the auth middleware report the user id back to the access log.

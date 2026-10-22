@@ -21,7 +21,7 @@ type matrixRow struct {
 // authzWorld builds the fixed world the matrix is written against.
 func authzWorld(t *testing.T) (*harness, map[string]string, map[string]string) {
 	h := newHarness(t)
-	tokens := map[string]string{"anon": ""}
+	tokens := map[string]string{"anon": "", "bogus": "not-a-real-session-token"}
 	for _, n := range []string{"alice", "bob", "carol", "mallory"} {
 		tokens[n] = h.register(n).Token
 	}
@@ -110,7 +110,7 @@ func normalisePath(p string) string {
 }
 
 func TestSend_RateLimited(t *testing.T) {
-	h := newHarness(t)
+	h := newHarness(t, productionLimits)
 	a := h.register("alice")
 	h.register("bob")
 	conv := h.do("POST", "/v1/conversations", a.Token, map[string]any{"kind": "direct", "username": "bob"}).Body["id"].(string)

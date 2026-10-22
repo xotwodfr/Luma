@@ -38,7 +38,7 @@ func newHarness(t *testing.T, opts ...func(*api.Deps)) *harness {
 	pool := testdb.New(t)
 	logs := &bytes.Buffer{}
 	cfg := config.Config{Registration: "invite", UploadDir: t.TempDir(), MaxUploadBytes: 1 << 20, PublicURL: "http://test"}
-	deps := api.Deps{Pool: pool, Config: cfg, Logger: slog.New(slog.NewJSONHandler(logs, nil)), AuthPerMinute: 1000}
+	deps := api.Deps{Pool: pool, Config: cfg, Logger: slog.New(slog.NewJSONHandler(logs, nil)), AuthPerMinute: 1000, SendPer10s: 1000}
 	for _, o := range opts {
 		o(&deps)
 	}
@@ -124,4 +124,4 @@ func (h *harness) login(username, password string) resp {
 	})
 }
 
-func productionLimits(d *api.Deps) { d.AuthPerMinute = 0 }
+func productionLimits(d *api.Deps) { d.AuthPerMinute, d.SendPer10s = 0, 0 }

@@ -15,6 +15,7 @@ import (
 	"luma.folk3s.com/server/internal/config"
 	"luma.folk3s.com/server/internal/db"
 	"luma.folk3s.com/server/internal/httpx"
+	"luma.folk3s.com/server/internal/realtime"
 	"luma.folk3s.com/server/internal/users"
 )
 
@@ -24,6 +25,10 @@ type Deps struct {
 	Logger *slog.Logger
 	// AuthPerMinute caps register/login attempts per client IP. 0 means the production default of 10.
 	AuthPerMinute int
+	// SendPer10s caps message sends per user (REST + WebSocket). 0 means the production default of 30.
+	SendPer10s int
+	// HelloTimeout bounds unauthenticated WebSocket connections. 0 means 10s.
+	HelloTimeout time.Duration
 }
 
 // App holds the services so tests and the admin CLI can reach them directly.
@@ -31,6 +36,7 @@ type App struct {
 	Auth    *auth.Service
 	Users   *users.Service
 	Chat    *chat.Service
+	Hub     *realtime.Hub
 	deps    Deps
 	handler http.Handler
 	routes  []string
@@ -51,11 +57,17 @@ func New(d Deps) *App {
 	}
 	authH := &auth.Handlers{Svc: a.Auth, Limit: httpx.NewLimiter(d.AuthPerMinute, time.Minute), TrustedProxy: d.Config.TrustedProxy}
 	usersH := &users.Handlers{Svc: a.Users}
-	chatH := &chat.Handlers{
-		Svc:       a.Chat,
-		SendLimit: httpx.NewLimiter(30, 10*time.Second),
-		OpenLimit: httpx.NewLimiter(20, 24*time.Hour),
+	// One send bucket per user, shared by REST and WebSocket so neither path bypasses it.
+	if d.SendPer10s == 0 {
+		d.SendPer10s = 30
 	}
+	sendLimit := httpx.NewLimiter(d.SendPer10s, 10*time.Second)
+	chatH := &chat.Handlers{Svc: a.Chat, SendLimit: sendLimit, OpenLimit: httpx.NewLimiter(20, 24*time.Hour)}
+	a.Hub = realtime.NewHub(realtime.Options{
+		Chat: a.Chat, Auth: a.Auth, Pool: d.Pool, Logger: d.Logger, SendLimit: sendLimit, HelloTimeout: d.HelloTimeout,
+	})
+	a.Chat.SetNotifier(a.Hub)
+	a.Auth.OnRevoke = a.Hub.CloseSession
 	req := a.Auth.Require
 
 	mux := http.NewServeMux()
@@ -89,6 +101,7 @@ func New(d Deps) *App {
 	handle("GET /v1/conversations/{id}/messages", req(chatH.History))
 	handle("POST /v1/conversations/{id}/messages", req(chatH.Send))
 	handle("POST /v1/conversations/{id}/read", req(chatH.Read))
+	handle("GET /v1/realtime", a.Hub.ServeHTTP)
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		httpx.Fail(w, r, httpx.ErrNotFound)
@@ -101,7 +114,7 @@ func New(d Deps) *App {
 func (a *App) Handler() http.Handler { return a.handler }
 
 // Close releases background resources (realtime hub, sweepers). The pool is owned by the caller.
-func (a *App) Close() {}
+func (a *App) Close() { a.Hub.Close() }
 
 func securityHeaders(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

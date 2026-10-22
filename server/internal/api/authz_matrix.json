@@ -1,5 +1,5 @@
 {
-  "_comment": "World: alice, bob, carol, mallory. DM {ab} = alice+bob. DM {am} = alice+mallory, then alice blocked mallory. {aliceSession} is one of alice's session ids. Every REST route must appear here.",
+  "_comment": "Principals: anon (no token), bogus (invalid token), alice, bob, carol, mallory. World: alice, bob, carol, mallory. DM {ab} = alice+bob. DM {am} = alice+mallory, then alice blocked mallory. {aliceSession} is one of alice's session ids. Every REST route must appear here.",
   "rows": [
     { "method": "GET", "path": "/v1/me", "as": "anon", "expect": 401 },
     { "method": "GET", "path": "/v1/me", "as": "alice", "expect": 200 },
@@ -48,6 +48,11 @@
     { "method": "POST", "path": "/v1/conversations/{ab}/read", "as": "bob", "body": { "seq": 1 }, "expect": 200 },
     { "method": "POST", "path": "/v1/conversations/{ab}/read", "as": "carol", "body": { "seq": 1 }, "expect": 404 },
     { "method": "POST", "path": "/v1/conversations/{ab}/read", "as": "anon", "body": { "seq": 1 }, "expect": 401 },
+
+    { "method": "GET", "path": "/v1/realtime", "as": "bogus", "expect": 401 },
+    { "method": "GET", "path": "/v1/realtime", "as": "anon", "expect": 426 },
+    { "method": "GET", "path": "/v1/realtime", "as": "alice", "expect": 426 },
+    { "method": "GET", "path": "/v1/me", "as": "bogus", "expect": 401 },
 
     { "method": "GET", "path": "/v1/health/live", "as": "anon", "expect": 200 },
     { "method": "GET", "path": "/v1/health/ready", "as": "anon", "expect": 200 },

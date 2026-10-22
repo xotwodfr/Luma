@@ -19,9 +19,9 @@ import (
 )
 
 const (
-	SessionIdleExpiry  = 90 * 24 * time.Hour
-	InviteTTL          = 7 * 24 * time.Hour
-	MaxOpenUserInvites = 5
+	SessionIdleExpiry   = 90 * 24 * time.Hour
+	InviteTTL           = 7 * 24 * time.Hour
+	MaxOpenUserInvites  = 5
 	lastSeenGranularity = time.Minute
 )
 
