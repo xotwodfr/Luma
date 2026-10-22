@@ -51,7 +51,7 @@ Root steps are marked **[root]**; the owner runs them.
 3. **[root]** backup directory: `sudo install -d -m 700 -o root -g root /var/backups/luma`
 4. Preflight (read-only): `LUMA_TAG=$LUMA_TAG deploy/preflight.sh`. It must print `preflight passed`.
 5. Start: `C up -d --wait`, then check `curl -s http://127.0.0.1:8790/v1/health/ready`
-   → `{"migration":3,"status":"ok"}` and `curl -s https://chat.folk3s.com/v1/health/ready`.
+   → `{"migration":4,"status":"ok"}` and `curl -s https://chat.folk3s.com/v1/health/ready`.
 6. **[root]** Caddy comment only (the block already routes correctly). Show the diff, keep a backup:
    ```sh
    sudo cp -a /etc/caddy/Caddyfile /etc/caddy/Caddyfile.bak-$(date +%Y%m%d%H%M%S)
@@ -145,4 +145,60 @@ closes live sockets within a second, and makes the account invisible to lookups 
 
 ## Recorded restore test
 
-RECORDED_RUN_PLACEHOLDER
+Run 2026-10-22 12:51 UTC, `LUMA_TAG=76b8f13 deploy/test-restore.sh`, image built from commit `76b8f13`
+(the security-review fixes). Compose progress lines omitted; `$WORK` is a throwaway directory.
+
+```
+== throwaway age key and staging env ($WORK)
+
+== preflight
+preflight for project luma_staging
+  ok    env file is mode 600
+  ok    POSTGRES_PASSWORD is set and URL-safe
+  ok    LUMA_BACKUP_RECIPIENT is an age public key
+  ok    image luma-server:76b8f13 exists
+  ok    image luma-backup exists
+  ok    port 127.0.0.1:8791 is free
+  ok    volume luma_staging_pgdata does not exist yet and will be created
+  ok    volume luma_staging_uploads does not exist yet and will be created
+  ok    subnet 172.16.80.0/24 is not used by another network
+preflight passed
+
+== up
+{"migration":4,"status":"ok"}
+
+
+== seed through the API
+seeded: group 24 messages, dm 5 messages, 3 files; window check ok
+trusted proxy: sessions record the forwarded client IP (203.0.113.7)
+source:   users=3 conversations=2 members=5 messages=29 files=3 user_events=87 max_seq=24 migration=4
+source files on disk: 3
+
+== backup
+backup $WORK/backups/luma-20261022T125109Z: 52K
+total 52
+-rw------- 1 folkes folkes 34385 Oct 22 12:51 luma-20261022T125109Z.dump.age
+-rw------- 1 folkes folkes   201 Oct 22 12:51 luma-20261022T125109Z.sha256
+-rw------- 1 folkes folkes  9416 Oct 22 12:51 luma-20261022T125109Z.uploads.tar.age
+dump is encrypted (no plaintext message bodies)
+
+== restore into luma_restore_test
+restored $WORK/backups/luma-20261022T125109Z into luma_restore_test (127.0.0.1:8792)
+
+== compare
+restored: users=3 conversations=2 members=5 messages=29 files=3 user_events=87 max_seq=24 migration=4
+database counts match
+upload files match byte for byte (3 files, sha256)
+verified via API: history {'4239d31e-ee15-499f-b871-d8459384241e': 24, 'f673c356-8f77-4a54-aa4c-1e6b87906430': 5}, 3 files byte-identical, window enforced, search ok
+
+== tampered backup is refused
+checksum mismatch detected, nothing restored
+
+RESTORE TEST PASSED
+
+== teardown (scratch projects only)
+removed volume luma_staging_pgdata
+removed volume luma_staging_uploads
+removed volume luma_restore_test_pgdata
+removed volume luma_restore_test_uploads
+```
