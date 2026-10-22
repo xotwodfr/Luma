@@ -1,0 +1,145 @@
+<!-- Generated from design/tokens.json — do not edit. -->
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <ResourceDictionary.ThemeDictionaries>
+        <ResourceDictionary x:Key="Light">
+            <Color x:Key="LumaGroundColor">#FFF1F3F4</Color>
+            <SolidColorBrush x:Key="LumaGroundBrush" Color="#FFF1F3F4" />
+            <Color x:Key="LumaSurfaceColor">#FFFFFFFF</Color>
+            <SolidColorBrush x:Key="LumaSurfaceBrush" Color="#FFFFFFFF" />
+            <Color x:Key="LumaSurfaceRaisedColor">#FFFFFFFF</Color>
+            <SolidColorBrush x:Key="LumaSurfaceRaisedBrush" Color="#FFFFFFFF" />
+            <Color x:Key="LumaSurfaceSunkenColor">#FFE9EDEF</Color>
+            <SolidColorBrush x:Key="LumaSurfaceSunkenBrush" Color="#FFE9EDEF" />
+            <Color x:Key="LumaHairlineColor">#FFDDE2E5</Color>
+            <SolidColorBrush x:Key="LumaHairlineBrush" Color="#FFDDE2E5" />
+            <Color x:Key="LumaTextColor">#FF0E1418</Color>
+            <SolidColorBrush x:Key="LumaTextBrush" Color="#FF0E1418" />
+            <Color x:Key="LumaTextSecondaryColor">#FF47525A</Color>
+            <SolidColorBrush x:Key="LumaTextSecondaryBrush" Color="#FF47525A" />
+            <Color x:Key="LumaTextTertiaryColor">#FF5F6A72</Color>
+            <SolidColorBrush x:Key="LumaTextTertiaryBrush" Color="#FF5F6A72" />
+            <Color x:Key="LumaBubbleOutColor">#FF141A1E</Color>
+            <SolidColorBrush x:Key="LumaBubbleOutBrush" Color="#FF141A1E" />
+            <Color x:Key="LumaOnBubbleOutColor">#FFF2F5F6</Color>
+            <SolidColorBrush x:Key="LumaOnBubbleOutBrush" Color="#FFF2F5F6" />
+            <Color x:Key="LumaBubbleOutMetaColor">#FFA3ADB3</Color>
+            <SolidColorBrush x:Key="LumaBubbleOutMetaBrush" Color="#FFA3ADB3" />
+            <Color x:Key="LumaBubbleInColor">#FFE9EDEF</Color>
+            <SolidColorBrush x:Key="LumaBubbleInBrush" Color="#FFE9EDEF" />
+            <Color x:Key="LumaOnBubbleInColor">#FF0E1418</Color>
+            <SolidColorBrush x:Key="LumaOnBubbleInBrush" Color="#FF0E1418" />
+            <Color x:Key="LumaBubbleInMetaColor">#FF56616A</Color>
+            <SolidColorBrush x:Key="LumaBubbleInMetaBrush" Color="#FF56616A" />
+            <Color x:Key="LumaPrimaryColor">#FF141A1E</Color>
+            <SolidColorBrush x:Key="LumaPrimaryBrush" Color="#FF141A1E" />
+            <Color x:Key="LumaOnPrimaryColor">#FFF2F5F6</Color>
+            <SolidColorBrush x:Key="LumaOnPrimaryBrush" Color="#FFF2F5F6" />
+            <Color x:Key="LumaLampColor">#FFF2AE2E</Color>
+            <SolidColorBrush x:Key="LumaLampBrush" Color="#FFF2AE2E" />
+            <Color x:Key="LumaOnLampColor">#FF1A1405</Color>
+            <SolidColorBrush x:Key="LumaOnLampBrush" Color="#FF1A1405" />
+            <Color x:Key="LumaSelectionColor">#FFE3E8EB</Color>
+            <SolidColorBrush x:Key="LumaSelectionBrush" Color="#FFE3E8EB" />
+            <Color x:Key="LumaDangerColor">#FFB8322A</Color>
+            <SolidColorBrush x:Key="LumaDangerBrush" Color="#FFB8322A" />
+            <Color x:Key="LumaOnDangerColor">#FFFFFFFF</Color>
+            <SolidColorBrush x:Key="LumaOnDangerBrush" Color="#FFFFFFFF" />
+            <Color x:Key="LumaFocusRingColor">#FF0E1418</Color>
+            <SolidColorBrush x:Key="LumaFocusRingBrush" Color="#FF0E1418" />
+            <Color x:Key="LumaScrimColor">#FF0E1418</Color>
+            <SolidColorBrush x:Key="LumaScrimBrush" Color="#FF0E1418" />
+        </ResourceDictionary>
+        <ResourceDictionary x:Key="Default">
+            <Color x:Key="LumaGroundColor">#FF0B0F12</Color>
+            <SolidColorBrush x:Key="LumaGroundBrush" Color="#FF0B0F12" />
+            <Color x:Key="LumaSurfaceColor">#FF11161A</Color>
+            <SolidColorBrush x:Key="LumaSurfaceBrush" Color="#FF11161A" />
+            <Color x:Key="LumaSurfaceRaisedColor">#FF192025</Color>
+            <SolidColorBrush x:Key="LumaSurfaceRaisedBrush" Color="#FF192025" />
+            <Color x:Key="LumaSurfaceSunkenColor">#FF0B0F12</Color>
+            <SolidColorBrush x:Key="LumaSurfaceSunkenBrush" Color="#FF0B0F12" />
+            <Color x:Key="LumaHairlineColor">#FF232B31</Color>
+            <SolidColorBrush x:Key="LumaHairlineBrush" Color="#FF232B31" />
+            <Color x:Key="LumaTextColor">#FFECF0F2</Color>
+            <SolidColorBrush x:Key="LumaTextBrush" Color="#FFECF0F2" />
+            <Color x:Key="LumaTextSecondaryColor">#FFA7B1B8</Color>
+            <SolidColorBrush x:Key="LumaTextSecondaryBrush" Color="#FFA7B1B8" />
+            <Color x:Key="LumaTextTertiaryColor">#FF86919A</Color>
+            <SolidColorBrush x:Key="LumaTextTertiaryBrush" Color="#FF86919A" />
+            <Color x:Key="LumaBubbleOutColor">#FFE8EDF0</Color>
+            <SolidColorBrush x:Key="LumaBubbleOutBrush" Color="#FFE8EDF0" />
+            <Color x:Key="LumaOnBubbleOutColor">#FF0B0F12</Color>
+            <SolidColorBrush x:Key="LumaOnBubbleOutBrush" Color="#FF0B0F12" />
+            <Color x:Key="LumaBubbleOutMetaColor">#FF4E5961</Color>
+            <SolidColorBrush x:Key="LumaBubbleOutMetaBrush" Color="#FF4E5961" />
+            <Color x:Key="LumaBubbleInColor">#FF1C2328</Color>
+            <SolidColorBrush x:Key="LumaBubbleInBrush" Color="#FF1C2328" />
+            <Color x:Key="LumaOnBubbleInColor">#FFECF0F2</Color>
+            <SolidColorBrush x:Key="LumaOnBubbleInBrush" Color="#FFECF0F2" />
+            <Color x:Key="LumaBubbleInMetaColor">#FF8E99A1</Color>
+            <SolidColorBrush x:Key="LumaBubbleInMetaBrush" Color="#FF8E99A1" />
+            <Color x:Key="LumaPrimaryColor">#FFE8EDF0</Color>
+            <SolidColorBrush x:Key="LumaPrimaryBrush" Color="#FFE8EDF0" />
+            <Color x:Key="LumaOnPrimaryColor">#FF0B0F12</Color>
+            <SolidColorBrush x:Key="LumaOnPrimaryBrush" Color="#FF0B0F12" />
+            <Color x:Key="LumaLampColor">#FFF5BC4C</Color>
+            <SolidColorBrush x:Key="LumaLampBrush" Color="#FFF5BC4C" />
+            <Color x:Key="LumaOnLampColor">#FF1A1405</Color>
+            <SolidColorBrush x:Key="LumaOnLampBrush" Color="#FF1A1405" />
+            <Color x:Key="LumaSelectionColor">#FF1E262B</Color>
+            <SolidColorBrush x:Key="LumaSelectionBrush" Color="#FF1E262B" />
+            <Color x:Key="LumaDangerColor">#FFFF8277</Color>
+            <SolidColorBrush x:Key="LumaDangerBrush" Color="#FFFF8277" />
+            <Color x:Key="LumaOnDangerColor">#FF1A0705</Color>
+            <SolidColorBrush x:Key="LumaOnDangerBrush" Color="#FF1A0705" />
+            <Color x:Key="LumaFocusRingColor">#FFECF0F2</Color>
+            <SolidColorBrush x:Key="LumaFocusRingBrush" Color="#FFECF0F2" />
+            <Color x:Key="LumaScrimColor">#FF000000</Color>
+            <SolidColorBrush x:Key="LumaScrimBrush" Color="#FF000000" />
+        </ResourceDictionary>
+    </ResourceDictionary.ThemeDictionaries>
+
+    <x:Double x:Key="LumaSpace0">0</x:Double>
+    <x:Double x:Key="LumaSpace1">2</x:Double>
+    <x:Double x:Key="LumaSpace2">4</x:Double>
+    <x:Double x:Key="LumaSpace3">8</x:Double>
+    <x:Double x:Key="LumaSpace4">12</x:Double>
+    <x:Double x:Key="LumaSpace5">16</x:Double>
+    <x:Double x:Key="LumaSpace6">20</x:Double>
+    <x:Double x:Key="LumaSpace7">24</x:Double>
+    <x:Double x:Key="LumaSpace8">32</x:Double>
+    <x:Double x:Key="LumaSpace9">40</x:Double>
+    <x:Double x:Key="LumaSpace10">48</x:Double>
+    <x:Double x:Key="LumaSpace11">64</x:Double>
+    <x:Double x:Key="LumaSizeAvatarS">28</x:Double>
+    <x:Double x:Key="LumaSizeAvatarM">44</x:Double>
+    <x:Double x:Key="LumaSizeAvatarL">56</x:Double>
+    <x:Double x:Key="LumaSizeAvatarXL">96</x:Double>
+    <x:Double x:Key="LumaSizeHitMin">44</x:Double>
+    <x:Double x:Key="LumaSizeRow">72</x:Double>
+    <x:Double x:Key="LumaSizeComposerMin">44</x:Double>
+    <x:Double x:Key="LumaSizeBadge">20</x:Double>
+    <x:Double x:Key="LumaSizePresenceDot">10</x:Double>
+    <x:Double x:Key="LumaSizeLumaLine">2</x:Double>
+    <x:Double x:Key="LumaSizeSidebar">264</x:Double>
+    <x:Double x:Key="LumaSizeListPane">340</x:Double>
+    <x:Double x:Key="LumaSizeBubbleMax">560</x:Double>
+    <CornerRadius x:Key="LumaRadiusXs">6</CornerRadius>
+    <CornerRadius x:Key="LumaRadiusS">10</CornerRadius>
+    <CornerRadius x:Key="LumaRadiusM">14</CornerRadius>
+    <CornerRadius x:Key="LumaRadiusBubble">20</CornerRadius>
+    <CornerRadius x:Key="LumaRadiusBubbleJoined">6</CornerRadius>
+    <CornerRadius x:Key="LumaRadiusSheet">24</CornerRadius>
+    <CornerRadius x:Key="LumaRadiusPill">999</CornerRadius>
+    <x:Double x:Key="LumaTypeLargeTitleSize">32</x:Double>
+    <x:Double x:Key="LumaTypeTitleSize">22</x:Double>
+    <x:Double x:Key="LumaTypeHeadlineSize">16</x:Double>
+    <x:Double x:Key="LumaTypeBodySize">16</x:Double>
+    <x:Double x:Key="LumaTypeCalloutSize">15</x:Double>
+    <x:Double x:Key="LumaTypeSubheadSize">14</x:Double>
+    <x:Double x:Key="LumaTypeFootnoteSize">13</x:Double>
+    <x:Double x:Key="LumaTypeCaptionSize">12</x:Double>
+    <FontFamily x:Key="LumaDisplayFont">ms-appx:///Assets/Fonts/InstrumentSans.ttf#Instrument Sans</FontFamily>
+</ResourceDictionary>

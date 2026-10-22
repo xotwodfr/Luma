@@ -17,7 +17,7 @@ test('emits every platform file with accent values, spacing and header', () => {
     assert.match(src, /Generated from design\/tokens\.json — do not edit\./, f);
     assert.ok(src.toUpperCase().includes(strip(tokens.color.light.lamp)), `${f} light lamp`);
     assert.ok(src.toUpperCase().includes(strip(tokens.color.dark.lamp)), `${f} dark lamp`);
-    assert.match(src, /\b16\b/, `${f} space 16`);
+    assert.match(src, /[^0-9.]16[^0-9.]/, `${f} space 16`);
   }
   assert.match(readFileSync(join(dir, 'qmldir'), 'utf8'), /singleton LumaTokens/);
 });
