@@ -64,7 +64,8 @@ func New(d Deps) *App {
 		d.SendPer10s = 30
 	}
 	sendLimit := httpx.NewLimiter(d.SendPer10s, 10*time.Second)
-	chatH := &chat.Handlers{Svc: a.Chat, SendLimit: sendLimit, OpenLimit: httpx.NewLimiter(20, 24*time.Hour), LookupLimit: lookupLimit}
+	chatH := &chat.Handlers{Svc: a.Chat, SendLimit: sendLimit, OpenLimit: httpx.NewLimiter(20, 24*time.Hour), LookupLimit: lookupLimit,
+		GroupLimit: httpx.NewLimiter(10, 24*time.Hour), AddLimit: httpx.NewLimiter(300, 24*time.Hour)}
 	a.Hub = realtime.NewHub(realtime.Options{
 		Chat: a.Chat, Auth: a.Auth, Pool: d.Pool, Logger: d.Logger, SendLimit: sendLimit, HelloTimeout: d.HelloTimeout,
 	})
@@ -104,6 +105,12 @@ func New(d Deps) *App {
 	handle("POST /v1/conversations", req(chatH.Create))
 	handle("GET /v1/conversations", req(chatH.List))
 	handle("GET /v1/conversations/{id}", req(chatH.Get))
+	handle("PATCH /v1/conversations/{id}", req(chatH.Rename))
+	handle("PATCH /v1/conversations/{id}/settings", req(chatH.Settings))
+	handle("POST /v1/conversations/{id}/members", req(chatH.AddMembers))
+	handle("DELETE /v1/conversations/{id}/members/{user_id}", req(chatH.RemoveMember))
+	handle("PATCH /v1/conversations/{id}/members/{user_id}", req(chatH.SetRole))
+	handle("POST /v1/conversations/{id}/leave", req(chatH.Leave))
 	handle("GET /v1/conversations/{id}/messages", req(chatH.History))
 	handle("POST /v1/conversations/{id}/messages", req(chatH.Send))
 	handle("POST /v1/conversations/{id}/read", req(chatH.Read))

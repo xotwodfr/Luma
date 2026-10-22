@@ -30,7 +30,10 @@ func NewLimiter(n int, window time.Duration) *Limiter {
 }
 
 // Allow takes one token for key. When empty it reports how long until one is available.
-func (l *Limiter) Allow(key string) (bool, time.Duration) {
+func (l *Limiter) Allow(key string) (bool, time.Duration) { return l.AllowN(key, 1) }
+
+// AllowN takes n tokens at once, or none.
+func (l *Limiter) AllowN(key string, n int) (bool, time.Duration) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	now := l.now()
@@ -50,16 +53,19 @@ func (l *Limiter) Allow(key string) (bool, time.Duration) {
 	}
 	b.tokens = math.Min(l.capacity, b.tokens+float64(now.Sub(b.at))*rate)
 	b.at = now
-	if b.tokens >= 1 {
-		b.tokens--
+	if b.tokens >= float64(n) {
+		b.tokens -= float64(n)
 		return true, 0
 	}
-	return false, time.Duration((1 - b.tokens) / rate)
+	return false, time.Duration((float64(n) - b.tokens) / rate)
 }
 
 // Limit writes 429 with Retry-After and returns false when key is over its limit.
-func (l *Limiter) Limit(w http.ResponseWriter, key string) bool {
-	ok, wait := l.Allow(key)
+func (l *Limiter) Limit(w http.ResponseWriter, key string) bool { return l.LimitN(w, key, 1) }
+
+// LimitN is Limit for an action that costs n tokens.
+func (l *Limiter) LimitN(w http.ResponseWriter, key string, n int) bool {
+	ok, wait := l.AllowN(key, n)
 	if !ok {
 		w.Header().Set("Retry-After", strconv.Itoa(int(math.Ceil(wait.Seconds()))))
 		WriteError(w, http.StatusTooManyRequests, "rate_limited", "Too many requests. Try again shortly.")

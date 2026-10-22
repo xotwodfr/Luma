@@ -50,19 +50,20 @@ type Member struct {
 
 // Conversation is one conversation as seen by one member.
 type Conversation struct {
-	ID             uuid.UUID `json:"id"`
-	Kind           string    `json:"kind"`
-	Title          *string   `json:"title"`
-	CreatedAt      time.Time `json:"created_at"`
-	LastSeq        int64     `json:"last_seq"`
-	LastActivityAt time.Time `json:"last_activity_at"`
-	LastReadSeq    int64     `json:"last_read_seq"`
-	Unread         int64     `json:"unread"`
-	Muted          bool      `json:"muted"`
-	Archived       bool      `json:"archived"`
-	Left           bool      `json:"left"`
-	LastMessage    *Message  `json:"last_message"`
-	Members        []Member  `json:"members"`
+	ID             uuid.UUID  `json:"id"`
+	Kind           string     `json:"kind"`
+	Title          *string    `json:"title"`
+	CreatedAt      time.Time  `json:"created_at"`
+	LastSeq        int64      `json:"last_seq"`
+	LastActivityAt time.Time  `json:"last_activity_at"`
+	LastReadSeq    int64      `json:"last_read_seq"`
+	Unread         int64      `json:"unread"`
+	Muted          bool       `json:"muted"`
+	MutedUntil     *time.Time `json:"muted_until"`
+	Archived       bool       `json:"archived"`
+	Left           bool       `json:"left"`
+	LastMessage    *Message   `json:"last_message"`
+	Members        []Member   `json:"members"`
 }
 
 // Event is one durable entry in a user's event log. Payload is the type-specific body.
@@ -178,7 +179,7 @@ func (s *Service) OpenDirect(ctx context.Context, me uuid.UUID, username string,
 
 const conversationCols = `c.id, c.kind, c.title, c.created_at, c.last_seq, c.last_activity_at,
 	m.last_read_seq, m.joined_seq, coalesce(m.left_seq, c.last_seq), m.left_at IS NOT NULL,
-	coalesce(m.muted_until > now(), false), m.archived,
+	coalesce(m.muted_until > now(), false), m.muted_until, m.archived,
 	lm.id, lm.seq, lm.sender_id, lm.client_id, lm.kind, lm.body, lm.meta, lm.created_at`
 
 // The last visible message is bounded by the member's (joined_seq, left_seq] window.
@@ -197,7 +198,7 @@ func scanConversation(row pgx.Row) (Conversation, error) {
 		At                 *time.Time
 	}
 	err := row.Scan(&c.ID, &c.Kind, &c.Title, &c.CreatedAt, &c.LastSeq, &c.LastActivityAt,
-		&c.LastReadSeq, &joined, &visibleLast, &c.Left, &c.Muted, &c.Archived,
+		&c.LastReadSeq, &joined, &visibleLast, &c.Left, &c.Muted, &c.MutedUntil, &c.Archived,
 		&lm.ID, &lm.Seq, &lm.Sender, &lm.Client, &lm.Kind, &lm.Body, &lm.Meta, &lm.At)
 	if err != nil {
 		return c, err
@@ -263,7 +264,9 @@ func (s *Service) attachMembers(ctx context.Context, list []Conversation) error 
 		if err := rows.Scan(&conv, &m.UserID, &m.Username, &m.DisplayName, &m.Role, &m.LastReadSeq, &m.LastDeliveredSeq); err != nil {
 			return err
 		}
-		list[idx[conv]].Members = append(list[idx[conv]].Members, m)
+		if c := &list[idx[conv]]; !c.Left { // former members don't learn who is in the group now
+			c.Members = append(c.Members, m)
+		}
 	}
 	return rows.Err()
 }
@@ -312,4 +315,53 @@ func scanMessage(r pgx.CollectableRow) (Message, error) {
 	var m Message
 	err := r.Scan(&m.ID, &m.ConversationID, &m.Seq, &m.SenderID, &m.ClientID, &m.Kind, &m.Body, &m.Meta, &m.CreatedAt)
 	return m, err
+}
+
+// SettingsInput is a partial update of my per-conversation settings. MutedUntil absent leaves
+// it unchanged; JSON null unmutes; a past time is the same as unmuted.
+type SettingsInput struct {
+	MutedUntil json.RawMessage `json:"muted_until"`
+	Archived   *bool           `json:"archived"`
+}
+
+var errBadSettings = httpx.E(http.StatusBadRequest, "invalid_request", "muted_until must be an RFC 3339 time or null.")
+
+// UpdateSettings changes my mute/archive state (former members may too) and tells my other devices.
+func (s *Service) UpdateSettings(ctx context.Context, me, conv uuid.UUID, in SettingsInput) (Conversation, error) {
+	setMute := len(in.MutedUntil) > 0
+	var until *time.Time
+	if setMute && string(in.MutedUntil) != "null" {
+		if err := json.Unmarshal(in.MutedUntil, &until); err != nil {
+			return Conversation{}, errBadSettings
+		}
+	}
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return Conversation{}, err
+	}
+	defer tx.Rollback(ctx)
+	if _, err := tx.Exec(ctx, `SELECT 1 FROM users WHERE id = $1 FOR NO KEY UPDATE`, me); err != nil { // lock order: users → members
+		return Conversation{}, err
+	}
+	var muted *time.Time
+	var archived bool
+	err = tx.QueryRow(ctx, `UPDATE members SET
+			muted_until = CASE WHEN $3 THEN $4 ELSE muted_until END,
+			archived = coalesce($5, archived)
+		WHERE conversation_id = $1 AND user_id = $2 RETURNING muted_until, archived`,
+		conv, me, setMute, until, in.Archived).Scan(&muted, &archived)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return Conversation{}, httpx.ErrNotFound
+	} else if err != nil {
+		return Conversation{}, err
+	}
+	payload, _ := json.Marshal(map[string]any{"conversation_id": conv, "muted_until": muted, "archived": archived})
+	events, err := appendEvents(ctx, tx, []pendingEvent{{me, "settings.updated", payload}})
+	if err != nil {
+		return Conversation{}, err
+	}
+	if err := s.commit(ctx, tx, events); err != nil {
+		return Conversation{}, err
+	}
+	return s.Get(ctx, me, conv)
 }

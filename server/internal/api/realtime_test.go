@@ -557,3 +557,39 @@ func TestRealtime_NoSendsAcceptedAfterRevoke(t *testing.T) {
 		t.Fatalf("%d messages accepted from a revoked session", after-before)
 	}
 }
+
+// Live fan-out follows membership: an added member starts receiving the group's messages
+// and typing; a removed one gets their removal notice and then nothing, over REST or WS.
+func TestRealtime_GroupFanOutFollowsMembership(t *testing.T) {
+	h := newHarness(t)
+	a, _, c := h.register("alice"), h.register("bob"), h.register("carol")
+	r := h.do("POST", "/v1/conversations", a.Token, map[string]any{"kind": "group", "title": "G", "usernames": []string{"bob"}})
+	g := r.Body["id"].(string)
+	wa := dialWS(t, h.wsURL(), a.Token, 0, dialOpts{})
+	wc := dialWS(t, h.wsURL(), c.Token, 0, dialOpts{})
+	h.restSend(a, g, "before carol")
+	wc.quiet(isEvent("message.created"), 200*time.Millisecond)
+
+	h.do("POST", "/v1/conversations/"+g+"/members", a.Token, map[string]any{"usernames": []string{"carol"}})
+	wc.expect(isEvent("membership.updated"), 2*time.Second)
+	wa.send(g, "hi carol")
+	if f := wc.expect(func(f frame) bool { return isEvent("message.created")(f) && f.messageBody() != "" }, 2*time.Second); f.messageBody() != "hi carol" {
+		t.Fatalf("carol got %s", f.D)
+	}
+	wa.write("typing", "", map[string]any{"conversation_id": g})
+	wc.expect(func(f frame) bool { return f.T == "typing" }, 2*time.Second)
+
+	if r := h.do("DELETE", "/v1/conversations/"+g+"/members/"+c.ID, a.Token, nil); r.Status != 200 {
+		t.Fatalf("remove: %d %s", r.Status, r.Raw)
+	}
+	wc.expect(isEvent("membership.updated"), 2*time.Second)
+	wc.expect(isEvent("message.created"), 2*time.Second) // the removal notice is inside her window
+	h.restSend(a, g, "after carol")
+	time.Sleep(1100 * time.Millisecond) // typing is throttled to 1/s per sender+conversation
+	wa.write("typing", "", map[string]any{"conversation_id": g})
+	wc.quiet(func(f frame) bool { return isEvent("message.created")(f) || f.T == "typing" }, 400*time.Millisecond)
+	id := wc.send(g, "can I still post?")
+	if f := wc.expect(func(f frame) bool { return f.ID == id }, 2*time.Second); f.T != "error" {
+		t.Fatalf("removed member's WS send: %s %s", f.T, f.D)
+	}
+}

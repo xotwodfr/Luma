@@ -17,6 +17,8 @@ type Handlers struct {
 	OpenLimit *httpx.Limiter
 	// LookupLimit throttles username probing (shared with GET /v1/users/{username}).
 	LookupLimit *httpx.Limiter
+	// GroupLimit counts group creations; AddLimit counts people added to groups (create or add).
+	GroupLimit, AddLimit *httpx.Limiter
 }
 
 func convID(w http.ResponseWriter, r *http.Request) (uuid.UUID, bool) {
@@ -31,15 +33,29 @@ func convID(w http.ResponseWriter, r *http.Request) (uuid.UUID, bool) {
 func (h *Handlers) Create(w http.ResponseWriter, r *http.Request) {
 	me := auth.MustPrincipal(r).UserID
 	var in struct {
-		Kind     string `json:"kind"`
-		Username string `json:"username"`
+		Kind      string   `json:"kind"`
+		Username  string   `json:"username"`
+		Title     string   `json:"title"`
+		Usernames []string `json:"usernames"`
 	}
 	if err := httpx.DecodeJSON(w, r, &in); err != nil {
 		httpx.Fail(w, r, err)
 		return
 	}
+	if in.Kind == "group" {
+		if !h.GroupLimit.Limit(w, me.String()) || !h.AddLimit.LimitN(w, me.String(), len(in.Usernames)) {
+			return
+		}
+		c, err := h.Svc.CreateGroup(r.Context(), me, in.Title, in.Usernames)
+		if err != nil {
+			httpx.Fail(w, r, err)
+			return
+		}
+		httpx.WriteJSON(w, http.StatusCreated, c)
+		return
+	}
 	if in.Kind != "direct" {
-		httpx.Fail(w, r, httpx.E(http.StatusBadRequest, "invalid_request", `Only kind "direct" is supported.`))
+		httpx.Fail(w, r, httpx.E(http.StatusBadRequest, "invalid_request", `kind must be "direct" or "group".`))
 		return
 	}
 	if !h.LookupLimit.Limit(w, me.String()) {
@@ -154,4 +170,112 @@ func (h *Handlers) Read(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httpx.WriteJSON(w, http.StatusOK, map[string]int64{"last_read_seq": seq})
+}
+
+func targetID(w http.ResponseWriter, r *http.Request) (uuid.UUID, uuid.UUID, bool) {
+	conv, ok := convID(w, r)
+	if !ok {
+		return uuid.Nil, uuid.Nil, false
+	}
+	u, err := uuid.Parse(r.PathValue("user_id"))
+	if err != nil {
+		httpx.Fail(w, r, httpx.ErrNotFound)
+		return uuid.Nil, uuid.Nil, false
+	}
+	return conv, u, true
+}
+
+func reply(w http.ResponseWriter, r *http.Request, c Conversation, err error) {
+	if err != nil {
+		httpx.Fail(w, r, err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, c)
+}
+
+func (h *Handlers) AddMembers(w http.ResponseWriter, r *http.Request) {
+	id, ok := convID(w, r)
+	if !ok {
+		return
+	}
+	me := auth.MustPrincipal(r).UserID
+	var in struct {
+		Usernames []string `json:"usernames"`
+	}
+	if err := httpx.DecodeJSON(w, r, &in); err != nil {
+		httpx.Fail(w, r, err)
+		return
+	}
+	if !h.AddLimit.LimitN(w, me.String(), len(in.Usernames)) {
+		return
+	}
+	c, err := h.Svc.AddMembers(r.Context(), me, id, in.Usernames)
+	reply(w, r, c, err)
+}
+
+func (h *Handlers) RemoveMember(w http.ResponseWriter, r *http.Request) {
+	conv, target, ok := targetID(w, r)
+	if !ok {
+		return
+	}
+	c, err := h.Svc.RemoveMember(r.Context(), auth.MustPrincipal(r).UserID, conv, target)
+	reply(w, r, c, err)
+}
+
+func (h *Handlers) SetRole(w http.ResponseWriter, r *http.Request) {
+	conv, target, ok := targetID(w, r)
+	if !ok {
+		return
+	}
+	var in struct {
+		Role string `json:"role"`
+	}
+	if err := httpx.DecodeJSON(w, r, &in); err != nil {
+		httpx.Fail(w, r, err)
+		return
+	}
+	c, err := h.Svc.SetRole(r.Context(), auth.MustPrincipal(r).UserID, conv, target, in.Role)
+	reply(w, r, c, err)
+}
+
+func (h *Handlers) Leave(w http.ResponseWriter, r *http.Request) {
+	id, ok := convID(w, r)
+	if !ok {
+		return
+	}
+	if err := h.Svc.Leave(r.Context(), auth.MustPrincipal(r).UserID, id); err != nil {
+		httpx.Fail(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *Handlers) Rename(w http.ResponseWriter, r *http.Request) {
+	id, ok := convID(w, r)
+	if !ok {
+		return
+	}
+	var in struct {
+		Title string `json:"title"`
+	}
+	if err := httpx.DecodeJSON(w, r, &in); err != nil {
+		httpx.Fail(w, r, err)
+		return
+	}
+	c, err := h.Svc.Rename(r.Context(), auth.MustPrincipal(r).UserID, id, in.Title)
+	reply(w, r, c, err)
+}
+
+func (h *Handlers) Settings(w http.ResponseWriter, r *http.Request) {
+	id, ok := convID(w, r)
+	if !ok {
+		return
+	}
+	var in SettingsInput
+	if err := httpx.DecodeJSON(w, r, &in); err != nil {
+		httpx.Fail(w, r, err)
+		return
+	}
+	c, err := h.Svc.UpdateSettings(r.Context(), auth.MustPrincipal(r).UserID, id, in)
+	reply(w, r, c, err)
 }

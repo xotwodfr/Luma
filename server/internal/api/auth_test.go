@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"luma.folk3s.com/server/internal/auth"
+	"luma.folk3s.com/server/internal/db"
 )
 
 func TestRegister_RequiresValidUnusedInvite(t *testing.T) {
@@ -292,7 +293,7 @@ func TestHealth(t *testing.T) {
 		t.Fatalf("live: %d", r.Status)
 	}
 	r := h.do("GET", "/v1/health/ready", "", nil)
-	if r.Status != 200 || r.Body["status"] != "ok" || r.Body["migration"] != float64(1) {
+	if r.Status != 200 || r.Body["status"] != "ok" || r.Body["migration"] != float64(db.LatestVersion()) {
 		t.Fatalf("ready: %d %s", r.Status, r.Raw)
 	}
 }

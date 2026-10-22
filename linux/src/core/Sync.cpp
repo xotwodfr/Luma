@@ -202,7 +202,7 @@ void Sync::applyEvent(qint64 seq, const QString &type, const QJsonObject &data)
     const QString convId = data[u"conversation_id"].toString();
     if (type == u"message.created") {
         applyMessage(Message::fromJson(data[u"message"].toObject()));
-    } else if (type == u"conversation.created") {
+    } else if (type == u"conversation.created" || type == u"membership.updated" || type == u"settings.updated") {
         fetchConversation(convId);
     } else if (type == u"read.updated" || type == u"receipt.updated") {
         if (auto c = m_store.conversation(convId)) {

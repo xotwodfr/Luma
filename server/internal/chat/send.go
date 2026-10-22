@@ -64,12 +64,8 @@ func (s *Service) send(ctx context.Context, me uuid.UUID, in SendInput) (Message
 	}
 	defer tx.Rollback(ctx)
 
-	var kind string
-	err = tx.QueryRow(ctx, `SELECT c.kind FROM conversations c JOIN members m ON m.conversation_id = c.id
-		WHERE c.id = $1 AND m.user_id = $2 AND m.left_at IS NULL FOR NO KEY UPDATE OF c`, in.ConversationID, me).Scan(&kind)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return Message{}, false, httpx.ErrNotFound
-	} else if err != nil {
+	kind, _, err := lockConversation(ctx, tx, in.ConversationID, me)
+	if err != nil {
 		return Message{}, false, err
 	}
 
@@ -96,14 +92,11 @@ func (s *Service) send(ctx context.Context, me uuid.UUID, in SendInput) (Message
 		}
 	}
 
-	var m Message
-	err = tx.QueryRow(ctx, `WITH s AS (
-			UPDATE conversations SET last_seq = last_seq + 1, last_activity_at = now() WHERE id = $1 RETURNING last_seq)
-		INSERT INTO messages (conversation_id, seq, sender_id, client_id, kind, body, meta)
-		SELECT $1, s.last_seq, $2, $3, $4, $5, $6 FROM s
-		RETURNING id, conversation_id, seq, sender_id, client_id, kind, body, meta, created_at`,
-		in.ConversationID, me, in.ClientID, in.Kind, in.Body, in.Meta).
-		Scan(&m.ID, &m.ConversationID, &m.Seq, &m.SenderID, &m.ClientID, &m.Kind, &m.Body, &m.Meta, &m.CreatedAt)
+	members, err := activeMembers(ctx, tx, in.ConversationID)
+	if err != nil {
+		return Message{}, false, err
+	}
+	m, events, err := post(ctx, tx, me, in, members, nil)
 	if isUniqueViolation(err) {
 		// The same client_id raced in via a different conversation row lock. Rolling back
 		// un-allocates the seq (gap-free); return whichever message won.
@@ -112,28 +105,62 @@ func (s *Service) send(ctx context.Context, me uuid.UUID, in SendInput) (Message
 	} else if err != nil {
 		return Message{}, false, err
 	}
-
-	members, err := activeMembers(ctx, tx, in.ConversationID)
-	if err != nil {
-		return Message{}, false, err
-	}
-	payload, _ := json.Marshal(map[string]any{"conversation_id": m.ConversationID, "message": m})
-	pending := make([]pendingEvent, len(members))
-	for i, u := range members {
-		pending[i] = pendingEvent{u, "message.created", payload}
-	}
-	events, err := appendEvents(ctx, tx, pending)
-	if err != nil {
-		return Message{}, false, err
-	}
-	if _, err := tx.Exec(ctx, `UPDATE members SET last_read_seq = $3, last_delivered_seq = $3
-		WHERE conversation_id = $1 AND user_id = $2`, in.ConversationID, me, m.Seq); err != nil {
-		return Message{}, false, err
-	}
 	if err := s.commit(ctx, tx, events); err != nil {
 		return Message{}, false, err
 	}
 	return m, true, nil
+}
+
+// post is steps 4–6 of Send, shared with group system messages. tx must already hold the
+// conversation row lock. It writes first (e.g. membership.updated, so a newly added member
+// learns of the conversation before its messages), then message.created for each recipient,
+// brings archived recipients back to the inbox, and advances the sender's watermarks.
+// Members rows are touched only after appendEvents has locked users (lock order).
+func post(ctx context.Context, tx pgx.Tx, sender uuid.UUID, in SendInput, recipients []uuid.UUID, first []pendingEvent) (Message, []Event, error) {
+	var m Message
+	err := tx.QueryRow(ctx, `WITH s AS (
+			UPDATE conversations SET last_seq = last_seq + 1, last_activity_at = now() WHERE id = $1 RETURNING last_seq)
+		INSERT INTO messages (conversation_id, seq, sender_id, client_id, kind, body, meta)
+		SELECT $1, s.last_seq, $2, $3, $4, $5, $6 FROM s
+		RETURNING id, conversation_id, seq, sender_id, client_id, kind, body, meta, created_at`,
+		in.ConversationID, sender, in.ClientID, in.Kind, in.Body, in.Meta).
+		Scan(&m.ID, &m.ConversationID, &m.Seq, &m.SenderID, &m.ClientID, &m.Kind, &m.Body, &m.Meta, &m.CreatedAt)
+	if err != nil {
+		return Message{}, nil, err
+	}
+	payload, _ := json.Marshal(map[string]any{"conversation_id": m.ConversationID, "message": m})
+	pending := append([]pendingEvent{}, first...)
+	for _, u := range recipients {
+		pending = append(pending, pendingEvent{u, "message.created", payload})
+	}
+	events, err := appendEvents(ctx, tx, pending)
+	if err != nil {
+		return Message{}, nil, err
+	}
+	if _, err := tx.Exec(ctx, `UPDATE members SET archived = false
+		WHERE conversation_id = $1 AND user_id = ANY($2) AND archived`, in.ConversationID, recipients); err != nil {
+		return Message{}, nil, err
+	}
+	if _, err := tx.Exec(ctx, `UPDATE members SET last_read_seq = $3, last_delivered_seq = $3
+		WHERE conversation_id = $1 AND user_id = $2`, in.ConversationID, sender, m.Seq); err != nil {
+		return Message{}, nil, err
+	}
+	return m, events, nil
+}
+
+// lockConversation takes conv's row lock, then reads me's active membership in a separate
+// statement. It must be two statements: under READ COMMITTED, a statement that waited for
+// the lock re-checks only the locked row and keeps its stale view of joined members rows,
+// so a member removed (or demoted) while we waited would still pass. Not an active member: not found.
+func lockConversation(ctx context.Context, tx pgx.Tx, conv, me uuid.UUID) (kind, role string, err error) {
+	err = tx.QueryRow(ctx, `SELECT kind FROM conversations WHERE id = $1 FOR NO KEY UPDATE`, conv).Scan(&kind)
+	if err == nil {
+		err = tx.QueryRow(ctx, `SELECT role FROM members WHERE conversation_id = $1 AND user_id = $2 AND left_at IS NULL`, conv, me).Scan(&role)
+	}
+	if errors.Is(err, pgx.ErrNoRows) {
+		err = httpx.ErrNotFound
+	}
+	return kind, role, err
 }
 
 func (s *Service) existing(ctx context.Context, me uuid.UUID, in SendInput) (Message, bool, error) {

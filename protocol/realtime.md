@@ -50,6 +50,8 @@ Close codes: `4001` unauthorized or no hello in time · `4002` first frame was n
 | `message.created` | `{conversation_id, message}`. Also sent to the sender's own devices. |
 | `read.updated` | `{conversation_id, user_id, last_read_seq, last_delivered_seq}`. Your read position moved on another device. |
 | `receipt.updated` | Same shape: another member's read or delivered watermark moved. |
+| `membership.updated` | `{conversation_id, user_id, change}` where change is `added`, `removed`, `left` or `role`. Sent to the affected user, before the matching system message, so a newly added member learns of the conversation first. Refetch the conversation. |
+| `settings.updated` | `{conversation_id, muted_until, archived}`. Your mute/archive changed on another device. |
 
 ## Client → server
 

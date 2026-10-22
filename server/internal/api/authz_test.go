@@ -22,8 +22,10 @@ type matrixRow struct {
 func authzWorld(t *testing.T) (*harness, map[string]string, map[string]string) {
 	h := newHarness(t)
 	tokens := map[string]string{"anon": "", "bogus": "not-a-real-session-token"}
-	for _, n := range []string{"alice", "bob", "carol", "mallory"} {
-		tokens[n] = h.register(n).Token
+	ids := map[string]string{}
+	for _, n := range []string{"alice", "bob", "carol", "mallory", "dave"} {
+		u := h.register(n)
+		tokens[n], ids[n] = u.Token, u.ID
 	}
 	open := func(as, with string) string {
 		r := h.do("POST", "/v1/conversations", tokens[as], map[string]any{"kind": "direct", "username": with})
@@ -36,6 +38,20 @@ func authzWorld(t *testing.T) (*harness, map[string]string, map[string]string) {
 	h.do("POST", "/v1/conversations/"+vars["am"]+"/messages", tokens["mallory"], map[string]any{"client_id": uuid.NewString(), "kind": "text", "body": "before the block"})
 	if r := h.do("POST", "/v1/users/mallory/block", tokens["alice"], nil); r.Status != 204 {
 		t.Fatalf("block: %d", r.Status)
+	}
+	// Group {g}: alice owner, bob admin, carol member, dave former member (removed after one message).
+	g := h.do("POST", "/v1/conversations", tokens["alice"], map[string]any{"kind": "group", "title": "G", "usernames": []string{"bob", "carol", "dave"}})
+	if g.Status != 201 {
+		t.Fatalf("create group: %d %s", g.Status, g.Raw)
+	}
+	vars["g"] = g.Body["id"].(string)
+	for k, v := range ids {
+		vars[k+"ID"] = v
+	}
+	h.do("PATCH", "/v1/conversations/"+vars["g"]+"/members/"+ids["bob"], tokens["alice"], map[string]any{"role": "admin"})
+	h.do("POST", "/v1/conversations/"+vars["g"]+"/messages", tokens["alice"], map[string]any{"client_id": uuid.NewString(), "kind": "text", "body": "dave can see this"})
+	if r := h.do("DELETE", "/v1/conversations/"+vars["g"]+"/members/"+ids["dave"], tokens["alice"], nil); r.Status != 200 {
+		t.Fatalf("remove dave: %d %s", r.Status, r.Raw)
 	}
 	sessions := h.do("GET", "/v1/auth/sessions", tokens["alice"], nil).Body["sessions"].([]any)
 	vars["aliceSession"] = sessions[0].(map[string]any)["id"].(string)
@@ -104,6 +120,9 @@ func normalisePath(p string) string {
 		}
 		if i == 3 && parts[2] == "users" {
 			parts[i] = "{username}"
+		}
+		if i == 5 && parts[4] == "members" {
+			parts[i] = "{user_id}"
 		}
 	}
 	return strings.Join(parts, "/")

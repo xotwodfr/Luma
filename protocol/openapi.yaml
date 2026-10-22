@@ -116,15 +116,74 @@ paths:
       summary: The caller's conversations, most recent activity first
       responses: { "200": { description: OK, content: { application/json: { schema: { type: object, properties: { conversations: { type: array, items: { $ref: "#/components/schemas/Conversation" } } } } } } } }
     post:
-      summary: Open (or return the existing) direct conversation with a username
-      description: Opening an existing DM is free; creating one counts against 20 new conversations per day per user. Blocked-either-way returns 404. Shares a 60/minute lookup bucket with GET /v1/users/{username}.
-      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [kind, username], properties: { kind: { const: direct }, username: { type: string } } } } } }
-      responses: { "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Conversation" } } } }, "404": { $ref: "#/components/responses/NotFound" }, "429": { $ref: "#/components/responses/RateLimited" } }
+      summary: Open (or return the existing) direct conversation, or create a group
+      description: |
+        direct: opening an existing DM is free; creating one counts against 20 new conversations per day per user.
+        Blocked-either-way returns 404. Shares a 60/minute lookup bucket with GET /v1/users/{username}.
+        group: the caller becomes owner. 10 groups per day per user; every username counts against a
+        300-per-day "people added to groups" bucket shared with POST /members. If any username is unknown,
+        disabled or blocked either way with the caller, the whole request fails with 404 (indistinguishably).
+        At most 256 members including the caller.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - { type: object, required: [kind, username], properties: { kind: { const: direct }, username: { type: string } } }
+                - { type: object, required: [kind, title], properties: { kind: { const: group }, title: { type: string, minLength: 1, maxLength: 80 }, usernames: { type: array, maxItems: 255, items: { type: string } } } }
+      responses:
+        "200": { description: Direct conversation, content: { application/json: { schema: { $ref: "#/components/schemas/Conversation" } } } }
+        "201": { description: Group created, content: { application/json: { schema: { $ref: "#/components/schemas/Conversation" } } } }
+        "400": { $ref: "#/components/responses/Error", description: "invalid_request, invalid_title" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Error", description: group_full }
+        "429": { $ref: "#/components/responses/RateLimited" }
   /v1/conversations/{id}:
     get:
       summary: One conversation as seen by the caller
       parameters: [{ $ref: "#/components/parameters/id" }]
       responses: { "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Conversation" } } } }, "404": { $ref: "#/components/responses/NotFound" } }
+    patch:
+      summary: Rename a group (owner and admins). Posts a `renamed` system message.
+      parameters: [{ $ref: "#/components/parameters/id" }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [title], properties: { title: { type: string, minLength: 1, maxLength: 80 } } } } } }
+      responses: { "200": { $ref: "#/components/responses/Conversation" }, "400": { $ref: "#/components/responses/Error", description: "invalid_title, not_a_group" }, "403": { $ref: "#/components/responses/Error", description: forbidden }, "404": { $ref: "#/components/responses/NotFound" } }
+  /v1/conversations/{id}/settings:
+    patch:
+      summary: Change the caller's mute/archive state (former members too)
+      description: Absent fields are unchanged. `muted_until` null unmutes; a past time reads as unmuted. A new message un-archives. Emits `settings.updated` to the caller's devices.
+      parameters: [{ $ref: "#/components/parameters/id" }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, properties: { muted_until: { type: [string, "null"], format: date-time }, archived: { type: boolean } } } } } }
+      responses: { "200": { $ref: "#/components/responses/Conversation" }, "400": { $ref: "#/components/responses/Error" }, "404": { $ref: "#/components/responses/NotFound" } }
+  /v1/conversations/{id}/members:
+    post:
+      summary: Add people to a group (any active member)
+      description: |
+        Already-active members are skipped. A re-added former member starts a new visibility window at the
+        current seq: messages from before (including their earlier window) are not visible. Unknown, disabled or
+        blocked-either-way with the caller → 404 for the whole request. Posts `member_added`.
+      parameters: [{ $ref: "#/components/parameters/id" }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [usernames], properties: { usernames: { type: array, items: { type: string } } } } } } }
+      responses: { "200": { $ref: "#/components/responses/Conversation" }, "404": { $ref: "#/components/responses/NotFound" }, "409": { $ref: "#/components/responses/Error", description: group_full }, "429": { $ref: "#/components/responses/RateLimited" } }
+  /v1/conversations/{id}/members/{user_id}:
+    delete:
+      summary: Remove an admin or member (owner and admins; the owner can't be removed)
+      description: The removed user keeps read access up to and including the `member_removed` message.
+      parameters: [{ $ref: "#/components/parameters/id" }, { $ref: "#/components/parameters/user_id" }]
+      responses: { "200": { $ref: "#/components/responses/Conversation" }, "400": { $ref: "#/components/responses/Error" }, "403": { $ref: "#/components/responses/Error", description: forbidden }, "404": { $ref: "#/components/responses/NotFound" } }
+    patch:
+      summary: Change a member's role
+      description: Owner and admins may set `admin` or `member` on anyone but the owner. Only the owner may set `owner`, which hands ownership over (the old owner becomes an admin).
+      parameters: [{ $ref: "#/components/parameters/id" }, { $ref: "#/components/parameters/user_id" }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [role], properties: { role: { enum: [member, admin, owner] } } } } } }
+      responses: { "200": { $ref: "#/components/responses/Conversation" }, "400": { $ref: "#/components/responses/Error", description: invalid_role }, "403": { $ref: "#/components/responses/Error", description: forbidden }, "404": { $ref: "#/components/responses/NotFound" } }
+  /v1/conversations/{id}/leave:
+    post:
+      summary: Leave a group
+      description: If the owner leaves, ownership passes to the longest-standing admin, else the longest-standing member (`owner_transferred`).
+      parameters: [{ $ref: "#/components/parameters/id" }]
+      responses: { "204": { description: Left }, "400": { $ref: "#/components/responses/Error", description: not_a_group }, "404": { $ref: "#/components/responses/NotFound" } }
   /v1/conversations/{id}/messages:
     get:
       summary: Page through visible history (ascending by seq)
@@ -170,7 +229,9 @@ components:
   parameters:
     id: { name: id, in: path, required: true, schema: { type: string, format: uuid } }
     username: { name: username, in: path, required: true, schema: { type: string } }
+    user_id: { name: user_id, in: path, required: true, schema: { type: string, format: uuid } }
   responses:
+    Conversation: { description: The conversation as the caller now sees it, content: { application/json: { schema: { $ref: "#/components/schemas/Conversation" } } } }
     Error: { description: Error, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
     Unauthorized: { description: unauthorized, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
     NotFound: { description: not_found (also used when access is denied, so existence never leaks), content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
@@ -235,9 +296,10 @@ components:
         last_activity_at: { type: string, format: date-time }
         last_read_seq: { type: integer }
         unread: { type: integer }
-        muted: { type: boolean }
+        muted: { type: boolean, description: "muted_until is in the future" }
+        muted_until: { type: [string, "null"], format: date-time }
         archived: { type: boolean }
-        left: { type: boolean }
+        left: { type: boolean, description: "A former member: history up to their leave is readable; members is empty" }
         last_message: { oneOf: [{ $ref: "#/components/schemas/Message" }, { type: "null" }] }
         members: { type: array, items: { $ref: "#/components/schemas/Member" } }
     Message:
@@ -250,7 +312,12 @@ components:
         client_id: { type: string, format: uuid }
         kind: { enum: [text, file, system] }
         body: { type: string, maxLength: 8000 }
-        meta: { type: object, description: "Extension envelope: attachments now; replies, reactions, voice later" }
+        meta:
+          type: object
+          description: |
+            Server-built extension envelope. kind=system: `{event, actor, …}` where event is one of
+            member_added {users}, member_removed {users}, member_left, renamed {title},
+            role_changed {user, role}, owner_transferred {user}.
         created_at: { type: string, format: date-time }
     SendRequest:
       type: object
