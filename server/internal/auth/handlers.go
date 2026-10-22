@@ -11,8 +11,9 @@ import (
 )
 
 // Handlers exposes the auth service over HTTP. Limit throttles credential endpoints per client IP;
-// AccountLimit throttles login attempts per username, so guessing one account's password stays
-// slow even if the client IP can be spoofed or rotated. Unknown usernames are throttled the same way.
+// AccountLimit throttles login attempts per username from addresses new to that account, so
+// guessing one password stays slow even if client IPs are spoofed or rotated, while the owner's
+// known addresses are never locked out. Unknown usernames behave like known ones from new addresses.
 type Handlers struct {
 	Svc            *Service
 	Limit          *httpx.Limiter
@@ -60,10 +61,18 @@ func (h *Handlers) Login(w http.ResponseWriter, r *http.Request) {
 		httpx.Fail(w, r, err)
 		return
 	}
-	if !h.AccountLimit.Limit(w, NormalizeUsername(in.Username)) {
+	dev := h.device(r, in.DeviceName, in.Platform)
+	// The per-username ceiling applies only from addresses that never held a session for this
+	// account, so an attacker can't lock the owner out from their usual networks.
+	known, err := h.Svc.KnownIP(r.Context(), in.Username, dev.IP)
+	if err != nil {
+		httpx.Fail(w, r, err)
 		return
 	}
-	token, u, err := h.Svc.Login(r.Context(), in.Username, in.Password, h.device(r, in.DeviceName, in.Platform))
+	if !known && !h.AccountLimit.Limit(w, NormalizeUsername(in.Username)) {
+		return
+	}
+	token, u, err := h.Svc.Login(r.Context(), in.Username, in.Password, dev)
 	if err != nil {
 		httpx.Fail(w, r, err)
 		return

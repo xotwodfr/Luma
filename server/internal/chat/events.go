@@ -122,6 +122,12 @@ func (s *Service) advance(ctx context.Context, me, conv uuid.UUID, seq int64, re
 		return 0, err
 	}
 	defer tx.Rollback(ctx)
+	// FOR SHARE conflicts with the NO KEY UPDATE lock every membership change and send takes, so
+	// the member list below can't change before our events commit (a member removed meanwhile
+	// would otherwise get a receipt past their window). Readers don't block each other.
+	if _, err := tx.Exec(ctx, `SELECT 1 FROM conversations WHERE id = $1 FOR SHARE`, conv); err != nil {
+		return 0, err
+	}
 	members, err := activeMembers(ctx, tx, conv)
 	if err != nil {
 		return 0, err

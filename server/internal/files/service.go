@@ -142,14 +142,35 @@ func (s *Service) Upload(ctx context.Context, me, conv uuid.UUID, name string, r
 		d.Sync()
 		d.Close()
 	}
-	err = s.pool.QueryRow(ctx, `INSERT INTO files (id, owner_id, conversation_id, name, mime, size, width, height, sha256)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING created_at`,
-		f.ID, me, conv, f.Name, f.Mime, f.Size, f.Width, f.Height, sum.Sum(nil)).Scan(&f.CreatedAt)
-	if err != nil {
+	if err := s.record(ctx, me, conv, f, sum.Sum(nil)); err != nil {
 		os.Remove(final)
 		return File{}, err
 	}
 	return f, nil
+}
+
+// record commits the files row. The quota is re-checked here under the user's row lock, so
+// parallel uploads can't each pass Admit and together overshoot it.
+func (s *Service) record(ctx context.Context, me, conv uuid.UUID, f File, digest []byte) error {
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+	var used int64
+	err = tx.QueryRow(ctx, `SELECT coalesce((SELECT sum(size) FROM files WHERE owner_id = $1 AND created_at > now() - interval '24 hours'), 0)
+		FROM users WHERE id = $1 FOR NO KEY UPDATE`, me).Scan(&used)
+	if err != nil {
+		return err
+	}
+	if used+f.Size > DailyQuota {
+		return errQuota
+	}
+	if _, err := tx.Exec(ctx, `INSERT INTO files (id, owner_id, conversation_id, name, mime, size, width, height, sha256)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`, f.ID, me, conv, f.Name, f.Mime, f.Size, f.Width, f.Height, digest); err != nil {
+		return err
+	}
+	return tx.Commit(ctx)
 }
 
 // Admit reports whether me may upload to conv now: an active member, under the daily quota.
@@ -292,23 +313,41 @@ func webpSize(b []byte) (int, int, bool) {
 	return 0, 0, false
 }
 
-// heicSize returns the largest image-spatial-extents ("ispe") property in the file's first
-// 1 MiB, where the meta box lives. Taking the maximum means extra or fake boxes can only make
-// the file look bigger (and be rejected), never smaller. No ispe at all reads as 0×0: invalid.
-// ponytail: a byte scan, not a box parser; clients must still apply their own decode limits.
+// heicSize returns the largest image-spatial-extents ("ispe") property inside the top-level
+// meta box, which must lie entirely within the file's first 1 MiB. Only the meta box is
+// searched, so decoy bytes elsewhere (e.g. in media data) are ignored; taking the maximum means
+// extra boxes can only make the image look bigger. No meta box or no ispe reads as 0×0: invalid.
+// ponytail: byte scan inside meta, not a full property parser; clients keep their own decode limits.
 func heicSize(f *os.File) (int, int) {
 	buf := make([]byte, 1<<20)
 	n, _ := f.ReadAt(buf, 0)
 	buf = buf[:n]
+	var meta []byte
+	for off := 0; off+8 <= len(buf) && meta == nil; {
+		size, hdr := uint64(binary.BigEndian.Uint32(buf[off:])), 8
+		switch {
+		case size == 1 && off+16 <= len(buf): // 64-bit largesize
+			size, hdr = binary.BigEndian.Uint64(buf[off+8:]), 16
+		case size == 0: // box runs to end of file
+			size = uint64(len(buf) - off)
+		}
+		if size < uint64(hdr) || size > uint64(len(buf)-off) {
+			return 0, 0 // malformed, or the box (meta included) extends past what we read
+		}
+		if string(buf[off+4:off+8]) == "meta" {
+			meta = buf[off+hdr : off+int(size)]
+		}
+		off += int(size)
+	}
 	var w, h int
 	for i := 0; ; {
-		j := bytes.Index(buf[i:], []byte("ispe"))
-		if j < 0 || i+j+16 > len(buf) {
+		j := bytes.Index(meta[i:], []byte("ispe"))
+		if j < 0 || i+j+16 > len(meta) {
 			return w, h
 		}
 		p := i + j + 8 // skip "ispe" and version/flags
-		w = max(w, int(binary.BigEndian.Uint32(buf[p:])))
-		h = max(h, int(binary.BigEndian.Uint32(buf[p+4:])))
+		w = max(w, int(binary.BigEndian.Uint32(meta[p:])))
+		h = max(h, int(binary.BigEndian.Uint32(meta[p+4:])))
 		i += j + 4
 	}
 }

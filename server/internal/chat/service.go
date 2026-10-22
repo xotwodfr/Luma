@@ -177,7 +177,11 @@ func (s *Service) OpenDirect(ctx context.Context, me uuid.UUID, username string,
 	return s.Get(ctx, me, id)
 }
 
-const conversationCols = `c.id, c.kind, c.title, c.created_at, c.last_seq, c.last_activity_at,
+// A former member sees the conversation as it was when they left: the title then, and
+// activity as of their last visible message. Nothing newer leaks (spec §10).
+const visibleActivity = `CASE WHEN m.left_at IS NULL THEN c.last_activity_at ELSE coalesce(lm.created_at, m.left_at) END`
+
+const conversationCols = `c.id, c.kind, CASE WHEN m.left_at IS NULL THEN c.title ELSE m.title_at_leave END, c.created_at, c.last_seq, ` + visibleActivity + `,
 	m.last_read_seq, m.joined_seq, coalesce(m.left_seq, c.last_seq), m.left_at IS NOT NULL,
 	coalesce(m.muted_until > now(), false), m.muted_until, m.archived,
 	lm.id, lm.seq, lm.sender_id, lm.client_id, lm.kind, lm.body, lm.meta, lm.created_at`
@@ -215,7 +219,7 @@ func scanConversation(row pgx.Row) (Conversation, error) {
 // List returns every conversation the user belongs or belonged to, most recent activity first.
 func (s *Service) List(ctx context.Context, me uuid.UUID) ([]Conversation, error) {
 	rows, err := s.pool.Query(ctx, `SELECT `+conversationCols+` `+conversationFrom+`
-		WHERE m.user_id = $1 ORDER BY c.last_activity_at DESC, c.id`, me)
+		WHERE m.user_id = $1 ORDER BY `+visibleActivity+` DESC, c.id`, me)
 	if err != nil {
 		return nil, err
 	}

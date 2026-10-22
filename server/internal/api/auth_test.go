@@ -2,13 +2,16 @@ package api_test
 
 import (
 	"context"
+	"fmt"
 	"net/http"
+	"net/netip"
 	"net/url"
 	"sort"
 	"strings"
 	"testing"
 	"time"
 
+	"luma.folk3s.com/server/internal/api"
 	"luma.folk3s.com/server/internal/auth"
 	"luma.folk3s.com/server/internal/db"
 )
@@ -298,27 +301,36 @@ func TestHealth(t *testing.T) {
 	}
 }
 
-// Per-account login throttle: independent of client IP, identical for unknown usernames.
+// Per-account login throttle: applies from addresses new to the account, so an attacker can't
+// lock the owner out (review finding), and treats unknown usernames exactly like known ones.
 func TestLogin_PerAccountLimit(t *testing.T) {
-	h := newHarness(t) // per-IP limit is relaxed in the harness; the account limit is production's
-	h.register("alice")
+	h := newHarness(t, func(d *api.Deps) { // per-IP limit relaxed; forwarded IPs trusted from loopback
+		d.Config.TrustedProxies = []netip.Prefix{netip.MustParsePrefix("127.0.0.0/8")}
+	})
+	h.do("POST", "/v1/auth/register", "", map[string]any{"invite": h.invite(), "username": "alice", "display_name": "a",
+		"password": "password-alice", "device_name": "d", "platform": "linux"}, "CF-Connecting-IP", "198.51.100.1")
+	login := func(name, pw, ip string) int {
+		return h.do("POST", "/v1/auth/login", "", map[string]any{"username": name, "password": pw}, "CF-Connecting-IP", ip).Status
+	}
 	for _, name := range []string{"alice", "nobody_here"} {
 		limited := -1
 		for i := 0; i < 32; i++ {
-			r := h.login(name, "wrong-password")
-			if r.Status == 429 {
+			ip := fmt.Sprintf("203.0.113.%d", i) // a fresh address every time: per-IP limits don't help
+			if st := login(name, "wrong-password", ip); st == 429 {
 				limited = i
 				break
-			}
-			if r.Status != 401 {
-				t.Fatalf("%s attempt %d: %d", name, i, r.Status)
+			} else if st != 401 {
+				t.Fatalf("%s attempt %d: %d", name, i, st)
 			}
 		}
 		if limited != 30 {
 			t.Fatalf("%s: throttled at attempt %d, want 30", name, limited)
 		}
 	}
-	if r := h.login("ALICE", "password-alice"); r.Status != 429 {
-		t.Fatalf("case-folded username must share the bucket: %d", r.Status)
+	if st := login("ALICE", "password-alice", "203.0.113.200"); st != 429 {
+		t.Fatalf("new address, case-folded name, during an attack: %d, want 429", st)
+	}
+	if st := login("alice", "password-alice", "198.51.100.1"); st != 200 {
+		t.Fatalf("the owner from a known address was locked out: %d", st)
 	}
 }

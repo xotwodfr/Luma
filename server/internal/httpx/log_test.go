@@ -28,4 +28,11 @@ func TestClientIP_OnlyTrustedPeersMayForward(t *testing.T) {
 			t.Errorf("peer %s: got %s, want %s", c.peer, got, c.want)
 		}
 	}
+	// Without CF-Connecting-IP, only the hop Caddy appended counts, not what the client sent.
+	r := httptest.NewRequest("GET", "/", nil)
+	r.RemoteAddr = "172.16.79.1:5000"
+	r.Header.Set("X-Forwarded-For", "1.2.3.4, 198.51.100.20")
+	if got := ClientIP(r, gw); got != "198.51.100.20" {
+		t.Errorf("X-Forwarded-For: got %s, want the right-most entry", got)
+	}
 }

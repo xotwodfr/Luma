@@ -127,6 +127,12 @@
     { "method": "PATCH", "path": "/v1/conversations/{g}/members/{carolID}", "as": "alice", "body": { "role": "god" }, "expect": 400 },
     { "method": "PATCH", "path": "/v1/conversations/{g}/members/{bobID}", "as": "alice", "body": { "role": "admin" }, "expect": 200 },
 
+    { "method": "PATCH", "path": "/v1/conversations/{g}/members/{carolID}", "as": "bob", "body": { "role": "admin" }, "expect": 200 },
+    { "method": "PATCH", "path": "/v1/conversations/{g}/members/{carolID}", "as": "bob", "body": { "role": "member" }, "expect": 200 },
+    { "method": "POST", "path": "/v1/conversations/{ab}/messages", "as": "alice", "body": { "client_id": "{uuid}", "kind": "file", "body": "", "meta": { "file_id": "{draft}" } }, "expect": 400 },
+    { "method": "POST", "path": "/v1/conversations/{g}/messages", "as": "bob", "body": { "client_id": "{uuid}", "kind": "file", "body": "", "meta": { "file_id": "{draft}" } }, "expect": 400 },
+    { "method": "POST", "path": "/v1/conversations/{ab}/messages", "as": "alice", "body": { "client_id": "{uuid}", "kind": "file", "body": "", "meta": { "file_id": "{f}" } }, "expect": 400 },
+    { "method": "POST", "path": "/v1/conversations/{g}/messages", "as": "alice", "body": { "client_id": "{uuid}", "kind": "file", "body": "", "meta": { "file_id": "{draft}", "name": "x.exe" } }, "expect": 400 },
     { "method": "DELETE", "path": "/v1/conversations/{g}/members/{carolID}", "as": "anon", "expect": 401 },
     { "method": "DELETE", "path": "/v1/conversations/{g}/members/{carolID}", "as": "mallory", "expect": 404 },
     { "method": "DELETE", "path": "/v1/conversations/{g}/members/{carolID}", "as": "dave", "expect": 404 },

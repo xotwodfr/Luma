@@ -32,9 +32,9 @@ func ClientIP(r *http.Request, trusted []netip.Prefix) string {
 			if cf := strings.TrimSpace(r.Header.Get("CF-Connecting-IP")); net.ParseIP(cf) != nil {
 				return cf
 			}
+			// Right-most entry: the address Caddy itself saw. Entries to its left are client-supplied.
 			if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
-				first, _, _ := strings.Cut(xff, ",")
-				if ip := strings.TrimSpace(first); net.ParseIP(ip) != nil {
+				if ip := strings.TrimSpace(xff[strings.LastIndex(xff, ",")+1:]); net.ParseIP(ip) != nil {
 					return ip
 				}
 			}

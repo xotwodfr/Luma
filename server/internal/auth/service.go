@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"net/netip"
 	"regexp"
 	"strings"
 	"time"
@@ -223,6 +224,17 @@ func (s *Service) Login(ctx context.Context, username, password string, dev Devi
 	}
 	token, err := createSession(ctx, s.pool, u.ID, dev.clean())
 	return token, u, err
+}
+
+// KnownIP reports whether ip has ever held a session (live or not) for username.
+func (s *Service) KnownIP(ctx context.Context, username, ip string) (bool, error) {
+	if _, err := netip.ParseAddr(ip); err != nil {
+		return false, nil
+	}
+	var known bool
+	err := s.pool.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM sessions s JOIN users u ON u.id = s.user_id
+		WHERE u.username = $1 AND s.ip = $2::inet)`, NormalizeUsername(username), ip).Scan(&known)
+	return known, err
 }
 
 // Authenticate resolves a bearer token to a live session, enforcing revocation,

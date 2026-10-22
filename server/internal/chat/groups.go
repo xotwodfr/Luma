@@ -208,7 +208,7 @@ func (s *Service) AddMembers(ctx context.Context, me, conv uuid.UUID, usernames 
 	if _, err := g.Exec(ctx, `INSERT INTO members (conversation_id, user_id, role, joined_seq, last_read_seq, last_delivered_seq)
 		SELECT $1, u, 'member', $3, $3, $3 FROM unnest($2::uuid[]) u
 		ON CONFLICT (conversation_id, user_id) DO UPDATE SET role = 'member', joined_at = now(), joined_seq = $3,
-			left_at = NULL, left_seq = NULL, last_read_seq = $3, last_delivered_seq = $3, archived = false, muted_until = NULL
+			left_at = NULL, left_seq = NULL, title_at_leave = NULL, last_read_seq = $3, last_delivered_seq = $3, archived = false, muted_until = NULL
 		WHERE members.left_at IS NOT NULL`, conv, added, m.Seq-1); err != nil {
 		return Conversation{}, err
 	}
@@ -241,7 +241,8 @@ func (s *Service) RemoveMember(ctx context.Context, me, conv, target uuid.UUID) 
 	if err != nil {
 		return Conversation{}, err
 	}
-	if _, err := g.Exec(ctx, `UPDATE members SET left_at = now(), left_seq = $3 WHERE conversation_id = $1 AND user_id = $2`, conv, target, m.Seq); err != nil {
+	if _, err := g.Exec(ctx, `UPDATE members SET left_at = now(), left_seq = $3,
+		title_at_leave = (SELECT title FROM conversations WHERE id = $1) WHERE conversation_id = $1 AND user_id = $2`, conv, target, m.Seq); err != nil {
 		return Conversation{}, err
 	}
 	return s.finish(ctx, g, events)
@@ -260,7 +261,8 @@ func (s *Service) Leave(ctx context.Context, me, conv uuid.UUID) error {
 	if err != nil {
 		return err
 	}
-	if _, err := g.Exec(ctx, `UPDATE members SET left_at = now(), left_seq = $3 WHERE conversation_id = $1 AND user_id = $2`, conv, me, m.Seq); err != nil {
+	if _, err := g.Exec(ctx, `UPDATE members SET left_at = now(), left_seq = $3,
+		title_at_leave = (SELECT title FROM conversations WHERE id = $1) WHERE conversation_id = $1 AND user_id = $2`, conv, me, m.Seq); err != nil {
 		return err
 	}
 	if g.role == "owner" {

@@ -44,7 +44,10 @@ paths:
   /v1/auth/login:
     post:
       summary: Exchange credentials for a session token
-      description: Unknown usernames and wrong passwords get identical responses and timing.
+      description: |
+        Unknown usernames and wrong passwords get identical responses and timing. 10 attempts per minute per
+        client IP; also 30 per hour per username from addresses that never held a session for that account
+        (429 with Retry-After), applied identically to unknown usernames.
       security: []
       requestBody:
         required: true
@@ -354,7 +357,7 @@ components:
         muted: { type: boolean, description: "muted_until is in the future" }
         muted_until: { type: [string, "null"], format: date-time }
         archived: { type: boolean }
-        left: { type: boolean, description: "A former member: history up to their leave is readable; members is empty" }
+        left: { type: boolean, description: "A former member: history up to their leave is readable; members is empty; title and last_activity_at are as of their leave" }
         last_message: { oneOf: [{ $ref: "#/components/schemas/Message" }, { type: "null" }] }
         members: { type: array, items: { $ref: "#/components/schemas/Member" } }
     Message:

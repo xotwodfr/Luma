@@ -588,6 +588,8 @@ func TestRealtime_GroupFanOutFollowsMembership(t *testing.T) {
 	time.Sleep(1100 * time.Millisecond) // typing is throttled to 1/s per sender+conversation
 	wa.write("typing", "", map[string]any{"conversation_id": g})
 	wc.quiet(func(f frame) bool { return isEvent("message.created")(f) || f.T == "typing" }, 400*time.Millisecond)
+	wc.write("typing", "", map[string]any{"conversation_id": g}) // former member's typing goes nowhere
+	wa.quiet(func(f frame) bool { return f.T == "typing" }, 300*time.Millisecond)
 	id := wc.send(g, "can I still post?")
 	if f := wc.expect(func(f frame) bool { return f.ID == id }, 2*time.Second); f.T != "error" {
 		t.Fatalf("removed member's WS send: %s %s", f.T, f.D)

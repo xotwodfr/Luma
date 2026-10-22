@@ -15,6 +15,7 @@ import (
 	"net/textproto"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -189,8 +190,8 @@ func TestFiles_DecompressionBombRejected(t *testing.T) {
 		b[27], b[28], b[29] = byte(ht), byte(ht>>8), byte(ht>>16)
 		return b
 	}
-	heic := func(ispe ...uint32) []byte {
-		b := []byte("\x00\x00\x00\x18ftypheic\x00\x00\x00\x00mif1heic")
+	ispeBoxes := func(ispe ...uint32) []byte {
+		var b []byte
 		for i := 0; i+1 < len(ispe); i += 2 {
 			box := make([]byte, 20)
 			copy(box, "\x00\x00\x00\x14ispe")
@@ -200,6 +201,13 @@ func TestFiles_DecompressionBombRejected(t *testing.T) {
 		}
 		return b
 	}
+	box := func(typ string, body []byte) []byte {
+		b := binary.BigEndian.AppendUint32(nil, uint32(8+len(body)))
+		return append(append(b, typ...), body...)
+	}
+	ftyp := box("ftyp", []byte("heic\x00\x00\x00\x00mif1heic"))
+	heic := func(ispe ...uint32) []byte { return append(slices.Clone(ftyp), box("meta", ispeBoxes(ispe...))...) }
+
 	cases := []struct {
 		name string
 		data []byte
@@ -210,6 +218,7 @@ func TestFiles_DecompressionBombRejected(t *testing.T) {
 		{"big.webp", webpX(16000, 16000), "image_too_large"},
 		{"big.heic", heic(512, 512, 13000, 100), "image_too_large"}, // the largest ispe counts
 		{"noextent.heic", heic(), "invalid_image"},
+		{"nometa.heic", append(slices.Clone(ftyp), ispeBoxes(100, 100)...), "invalid_image"},
 		{"zero.png", pngClaiming(0, 10), "invalid_image"},
 	}
 	for _, c := range cases {
@@ -356,5 +365,16 @@ func TestFiles_DailyQuota(t *testing.T) {
 		a.ID, conv, int64(1<<30))
 	if r := h.upload(a, conv, "one.txt", "", []byte("more")); r.Status != 429 || r.errCode() != "quota_exceeded" {
 		t.Fatalf("over quota: %d %s", r.Status, r.Raw)
+	}
+	// Just under the quota: Admit passes, but the size is checked again when the row commits.
+	h.pool.Exec(context.Background(), `UPDATE files SET size = $2 WHERE owner_id = $1`, a.ID, int64(1<<30-3))
+	if r := h.upload(a, conv, "five.txt", "", []byte("12345")); r.Status != 429 {
+		t.Fatalf("upload crossing the quota: %d %s", r.Status, r.Raw)
+	}
+	if left := h.diskFiles(); len(left) != 0 {
+		t.Fatalf("refused upload left %v on disk", left)
+	}
+	if r := h.upload(a, conv, "three.txt", "", []byte("123")); r.Status != 201 {
+		t.Fatalf("upload exactly reaching the quota: %d %s", r.Status, r.Raw)
 	}
 }

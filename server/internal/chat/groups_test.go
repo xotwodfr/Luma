@@ -100,13 +100,26 @@ func TestGroups_VisibilityWindows(t *testing.T) {
 	if !c.Left || c.LastSeq != 4 || len(c.Members) != 0 {
 		t.Fatalf("former member view: left=%v last_seq=%d members=%d", c.Left, c.LastSeq, len(c.Members))
 	}
+	// Review finding: nothing newer than her removal may show through the conversation itself.
+	at := c.LastActivityAt
+	_, err = w.svc.Rename(w.ctx, alice, g, "Plans after carol left")
+	must(t, err)
+	w.send(alice, g, "6 even later")
+	c, _ = w.svc.Get(w.ctx, carol, g)
+	if *c.Title != "Group" || !c.LastActivityAt.Equal(at) {
+		t.Fatalf("former member sees title %q, activity %v (was %v)", *c.Title, c.LastActivityAt, at)
+	}
+	list, _ := w.svc.List(w.ctx, carol)
+	if *list[0].Title != "Group" || !list[0].LastActivityAt.Equal(at) {
+		t.Fatalf("list leaks: %q %v", *list[0].Title, list[0].LastActivityAt)
+	}
 	if _, err := w.svc.History(w.ctx, carol, g, 0, 4, 100); err != nil {
 		t.Fatal(err)
 	}
 	if msgs, _ := w.svc.History(w.ctx, carol, g, 0, 4, 100); len(msgs) != 0 {
 		t.Fatalf("after_seq past the window leaked %d messages", len(msgs))
 	}
-	if got := w.seqs(bob, g); len(got) != 5 {
+	if got := w.seqs(bob, g); len(got) != 7 {
 		t.Fatalf("bob sees %v", got)
 	}
 }

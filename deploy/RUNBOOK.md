@@ -122,8 +122,9 @@ To restore a real backup for inspection: `LUMA_TAG=… deploy/restore.sh /var/ba
 
 ## Rotate secrets
 
-- **Database password:** `docker exec -it luma-luma-postgres-1 psql -U luma -c "ALTER USER luma PASSWORD '<new hex>'"`,
-  set `POSTGRES_PASSWORD` in `deploy/.env`, `C up -d --wait luma-server`.
+- **Database password:** `docker exec -it luma-luma-postgres-1 psql -U luma` then `\password luma`
+  (interactive, so the password stays out of shell history and process lists); set `POSTGRES_PASSWORD`
+  in `deploy/.env`; `C up -d --wait luma-server`.
 - **Backup key:** make a new key pair off-host, change `LUMA_BACKUP_RECIPIENT`. Keep the old private key until
   the last backup encrypted to it has aged out (14 days).
 - **All sessions of one user:** `docker exec luma-luma-server-1 /luma-server admin disable-user <name>` (also
