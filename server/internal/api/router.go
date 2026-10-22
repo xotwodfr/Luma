@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"luma.folk3s.com/server/internal/auth"
+	"luma.folk3s.com/server/internal/chat"
 	"luma.folk3s.com/server/internal/config"
 	"luma.folk3s.com/server/internal/db"
 	"luma.folk3s.com/server/internal/httpx"
@@ -29,6 +30,7 @@ type Deps struct {
 type App struct {
 	Auth    *auth.Service
 	Users   *users.Service
+	Chat    *chat.Service
 	deps    Deps
 	handler http.Handler
 }
@@ -37,6 +39,7 @@ func New(d Deps) *App {
 	a := &App{
 		Auth:  auth.NewService(d.Pool, d.Config.Registration),
 		Users: users.NewService(d.Pool),
+		Chat:  chat.NewService(d.Pool, nil),
 		deps:  d,
 	}
 	if d.AuthPerMinute == 0 {
@@ -44,6 +47,11 @@ func New(d Deps) *App {
 	}
 	authH := &auth.Handlers{Svc: a.Auth, Limit: httpx.NewLimiter(d.AuthPerMinute, time.Minute), TrustedProxy: d.Config.TrustedProxy}
 	usersH := &users.Handlers{Svc: a.Users}
+	chatH := &chat.Handlers{
+		Svc:       a.Chat,
+		SendLimit: httpx.NewLimiter(30, 10*time.Second),
+		OpenLimit: httpx.NewLimiter(20, 24*time.Hour),
+	}
 	req := a.Auth.Require
 
 	mux := http.NewServeMux()
@@ -66,6 +74,13 @@ func New(d Deps) *App {
 	mux.HandleFunc("GET /v1/users/{username}", req(usersH.Lookup))
 	mux.HandleFunc("POST /v1/users/{username}/block", req(usersH.Block))
 	mux.HandleFunc("DELETE /v1/users/{username}/block", req(usersH.Unblock))
+
+	mux.HandleFunc("POST /v1/conversations", req(chatH.Create))
+	mux.HandleFunc("GET /v1/conversations", req(chatH.List))
+	mux.HandleFunc("GET /v1/conversations/{id}", req(chatH.Get))
+	mux.HandleFunc("GET /v1/conversations/{id}/messages", req(chatH.History))
+	mux.HandleFunc("POST /v1/conversations/{id}/messages", req(chatH.Send))
+	mux.HandleFunc("POST /v1/conversations/{id}/read", req(chatH.Read))
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		httpx.Fail(w, r, httpx.ErrNotFound)
