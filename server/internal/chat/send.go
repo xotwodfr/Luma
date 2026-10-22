@@ -1,9 +1,11 @@
 package chat
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
+	"net/http"
 	"strings"
 	"unicode/utf8"
 
@@ -24,18 +26,37 @@ type SendInput struct {
 	Meta           json.RawMessage `json:"meta,omitempty"`
 }
 
-func (in SendInput) validate() error {
-	if in.ClientID == uuid.Nil || in.Kind != "text" || !utf8.ValidString(in.Body) || strings.ContainsRune(in.Body, 0) {
-		return errInvalidMessage
+var errBadAttachment = httpx.E(http.StatusBadRequest, "invalid_attachment", "That upload can't be attached here: it belongs to another conversation, is already attached, or has expired.")
+
+// validate checks a client send. For kind "file" it returns the upload to attach.
+func (in SendInput) validate() (fileID uuid.UUID, err error) {
+	if in.ClientID == uuid.Nil || !utf8.ValidString(in.Body) || strings.ContainsRune(in.Body, 0) || utf8.RuneCountInString(in.Body) > MaxBodyChars {
+		return uuid.Nil, errInvalidMessage
 	}
-	// meta is reserved for server-validated envelopes (attachments arrive in M4); clients can't set it yet.
-	if m := strings.TrimSpace(string(in.Meta)); m != "" && m != "{}" && m != "null" {
-		return errInvalidMessage
+	switch in.Kind {
+	case "text":
+		// meta is server-built; a text message carries none from the client.
+		if m := strings.TrimSpace(string(in.Meta)); m != "" && m != "{}" && m != "null" {
+			return uuid.Nil, errInvalidMessage
+		}
+		if strings.TrimSpace(in.Body) == "" {
+			return uuid.Nil, errInvalidMessage
+		}
+		return uuid.Nil, nil
+	case "file":
+		// The client names only its upload (body is an optional caption); name, mime, size and
+		// dimensions are filled in by the server from the files row.
+		var m struct {
+			FileID uuid.UUID `json:"file_id"`
+		}
+		dec := json.NewDecoder(bytes.NewReader(in.Meta))
+		dec.DisallowUnknownFields()
+		if dec.Decode(&m) != nil || dec.More() || m.FileID == uuid.Nil {
+			return uuid.Nil, errBadAttachment
+		}
+		return m.FileID, nil
 	}
-	if n := utf8.RuneCountInString(in.Body); n == 0 || n > MaxBodyChars || strings.TrimSpace(in.Body) == "" {
-		return errInvalidMessage
-	}
-	return nil
+	return uuid.Nil, errInvalidMessage
 }
 
 // Send durably appends a message. Transaction order (spec §11.2):
@@ -50,14 +71,15 @@ func (in SendInput) validate() error {
 //
 // created is false when an earlier identical send is returned.
 func (s *Service) Send(ctx context.Context, me uuid.UUID, in SendInput) (Message, bool, error) {
-	if err := in.validate(); err != nil {
+	fileID, err := in.validate()
+	if err != nil {
 		return Message{}, false, err
 	}
 	in.Meta = json.RawMessage(`{}`)
-	return s.send(ctx, me, in)
+	return s.send(ctx, me, in, fileID)
 }
 
-func (s *Service) send(ctx context.Context, me uuid.UUID, in SendInput) (Message, bool, error) {
+func (s *Service) send(ctx context.Context, me uuid.UUID, in SendInput, fileID uuid.UUID) (Message, bool, error) {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return Message{}, false, err
@@ -92,6 +114,11 @@ func (s *Service) send(ctx context.Context, me uuid.UUID, in SendInput) (Message
 		}
 	}
 
+	if fileID != uuid.Nil {
+		if in.Meta, err = claimFile(ctx, tx, me, in.ConversationID, fileID); err != nil {
+			return Message{}, false, err
+		}
+	}
 	members, err := activeMembers(ctx, tx, in.ConversationID)
 	if err != nil {
 		return Message{}, false, err
@@ -104,6 +131,11 @@ func (s *Service) send(ctx context.Context, me uuid.UUID, in SendInput) (Message
 		return s.existing(ctx, me, in)
 	} else if err != nil {
 		return Message{}, false, err
+	}
+	if fileID != uuid.Nil {
+		if _, err := tx.Exec(ctx, `UPDATE files SET attached_at = now(), attached_seq = $2 WHERE id = $1`, fileID, m.Seq); err != nil {
+			return Message{}, false, err
+		}
 	}
 	if err := s.commit(ctx, tx, events); err != nil {
 		return Message{}, false, err
@@ -161,6 +193,28 @@ func lockConversation(ctx context.Context, tx pgx.Tx, conv, me uuid.UUID) (kind,
 		err = httpx.ErrNotFound
 	}
 	return kind, role, err
+}
+
+// claimFile locks my unattached upload for conv and returns the message meta built from it.
+// Lock order: conversations → files → users → members.
+func claimFile(ctx context.Context, tx pgx.Tx, me, conv, id uuid.UUID) (json.RawMessage, error) {
+	var f struct {
+		ID     uuid.UUID `json:"file_id"`
+		Name   string    `json:"name"`
+		Mime   string    `json:"mime"`
+		Size   int64     `json:"size"`
+		Width  *int      `json:"width,omitempty"`
+		Height *int      `json:"height,omitempty"`
+	}
+	err := tx.QueryRow(ctx, `SELECT id, name, mime, size, width, height FROM files
+		WHERE id = $1 AND owner_id = $2 AND conversation_id = $3 AND attached_at IS NULL FOR NO KEY UPDATE`, id, me, conv).
+		Scan(&f.ID, &f.Name, &f.Mime, &f.Size, &f.Width, &f.Height)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, errBadAttachment
+	} else if err != nil {
+		return nil, err
+	}
+	return json.Marshal(f)
 }
 
 func (s *Service) existing(ctx context.Context, me uuid.UUID, in SendInput) (Message, bool, error) {

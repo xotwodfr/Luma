@@ -30,6 +30,8 @@ type harness struct {
 	app  *api.App
 	pool *pgxpool.Pool
 	logs *bytes.Buffer
+	// uploads is LUMA_UPLOAD_DIR; the size cap in tests is 1 MiB.
+	uploads string
 }
 
 // newHarness uses a generous auth rate limit; productionLimits restores the real one.
@@ -45,7 +47,7 @@ func newHarness(t *testing.T, opts ...func(*api.Deps)) *harness {
 	app := api.New(deps)
 	srv := httptest.NewServer(app.Handler())
 	t.Cleanup(func() { srv.Close(); app.Close() })
-	return &harness{t: t, srv: srv, app: app, pool: pool, logs: logs}
+	return &harness{t: t, srv: srv, app: app, pool: pool, logs: logs, uploads: deps.Config.UploadDir}
 }
 
 type resp struct {

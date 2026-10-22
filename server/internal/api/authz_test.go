@@ -50,9 +50,18 @@ func authzWorld(t *testing.T) (*harness, map[string]string, map[string]string) {
 	}
 	h.do("PATCH", "/v1/conversations/"+vars["g"]+"/members/"+ids["bob"], tokens["alice"], map[string]any{"role": "admin"})
 	h.do("POST", "/v1/conversations/"+vars["g"]+"/messages", tokens["alice"], map[string]any{"client_id": uuid.NewString(), "kind": "text", "body": "dave can see this"})
+	vars["gOld"] = h.mustUpload(user{Token: tokens["alice"]}, vars["g"], "old.txt", []byte("old"))
+	h.sendFile(user{Token: tokens["alice"]}, vars["g"], vars["gOld"])
 	if r := h.do("DELETE", "/v1/conversations/"+vars["g"]+"/members/"+ids["dave"], tokens["alice"], nil); r.Status != 200 {
 		t.Fatalf("remove dave: %d %s", r.Status, r.Raw)
 	}
+	// Files: {f} attached in {ab}; {gOld} in {g} before dave's removal, {gNew} after; {draft} unattached (alice's).
+	alice := user{ID: ids["alice"], Token: tokens["alice"]}
+	vars["f"] = h.mustUpload(alice, vars["ab"], "f.txt", []byte("f"))
+	h.sendFile(alice, vars["ab"], vars["f"])
+	vars["gNew"] = h.mustUpload(alice, vars["g"], "new.txt", []byte("new"))
+	h.sendFile(alice, vars["g"], vars["gNew"])
+	vars["draft"] = h.mustUpload(alice, vars["g"], "draft.txt", []byte("draft"))
 	sessions := h.do("GET", "/v1/auth/sessions", tokens["alice"], nil).Body["sessions"].([]any)
 	vars["aliceSession"] = sessions[0].(map[string]any)["id"].(string)
 	return h, tokens, vars
@@ -113,6 +122,7 @@ func TestAuthzMatrix_CoversAllRoutes(t *testing.T) {
 
 // normalisePath turns concrete matrix paths back into route patterns.
 func normalisePath(p string) string {
+	p, _, _ = strings.Cut(p, "?")
 	parts := strings.Split(p, "/")
 	for i, s := range parts {
 		if strings.HasPrefix(s, "{") || (len(s) == 36 && strings.Count(s, "-") == 4) || s == "not-a-uuid" {

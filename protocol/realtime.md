@@ -57,7 +57,7 @@ Close codes: `4001` unauthorized or no hello in time · `4002` first frame was n
 
 | t | d | Reply |
 |---|---|---|
-| `send` | `{conversation_id, client_id, kind: "text", body}` | `ack {message}` or `error` |
+| `send` | `{conversation_id, client_id, kind: "text", body}` or `{…, kind: "file", body?, meta: {file_id}}` (upload first via `POST /v1/files`) | `ack {message}` or `error` |
 | `read` | `{conversation_id, seq}` | `ack {last_read_seq}` |
 | `delivered` | `{conversation_id, seq}` | `ack {last_delivered_seq}` |
 | `typing` | `{conversation_id}` | none. Send at most once every 3 s while typing. |

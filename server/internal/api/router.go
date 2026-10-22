@@ -14,6 +14,7 @@ import (
 	"luma.folk3s.com/server/internal/chat"
 	"luma.folk3s.com/server/internal/config"
 	"luma.folk3s.com/server/internal/db"
+	"luma.folk3s.com/server/internal/files"
 	"luma.folk3s.com/server/internal/httpx"
 	"luma.folk3s.com/server/internal/realtime"
 	"luma.folk3s.com/server/internal/users"
@@ -36,6 +37,7 @@ type App struct {
 	Auth    *auth.Service
 	Users   *users.Service
 	Chat    *chat.Service
+	Files   *files.Service
 	Hub     *realtime.Hub
 	deps    Deps
 	handler http.Handler
@@ -51,6 +53,7 @@ func New(d Deps) *App {
 		Auth:  auth.NewService(d.Pool, d.Config.Registration),
 		Users: users.NewService(d.Pool),
 		Chat:  chat.NewService(d.Pool, nil),
+		Files: files.NewService(d.Pool, d.Config.UploadDir, d.Config.MaxUploadBytes),
 		deps:  d,
 	}
 	if d.AuthPerMinute == 0 {
@@ -66,6 +69,7 @@ func New(d Deps) *App {
 	sendLimit := httpx.NewLimiter(d.SendPer10s, 10*time.Second)
 	chatH := &chat.Handlers{Svc: a.Chat, SendLimit: sendLimit, OpenLimit: httpx.NewLimiter(20, 24*time.Hour), LookupLimit: lookupLimit,
 		GroupLimit: httpx.NewLimiter(10, 24*time.Hour), AddLimit: httpx.NewLimiter(300, 24*time.Hour)}
+	filesH := &files.Handlers{Svc: a.Files, UploadLimit: httpx.NewLimiter(20, time.Minute)}
 	a.Hub = realtime.NewHub(realtime.Options{
 		Chat: a.Chat, Auth: a.Auth, Pool: d.Pool, Logger: d.Logger, SendLimit: sendLimit, HelloTimeout: d.HelloTimeout,
 	})
@@ -114,6 +118,8 @@ func New(d Deps) *App {
 	handle("GET /v1/conversations/{id}/messages", req(chatH.History))
 	handle("POST /v1/conversations/{id}/messages", req(chatH.Send))
 	handle("POST /v1/conversations/{id}/read", req(chatH.Read))
+	handle("POST /v1/files", req(filesH.Upload))
+	handle("GET /v1/files/{id}", req(filesH.Get))
 	handle("GET /v1/realtime", a.Hub.ServeHTTP)
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -165,7 +171,7 @@ func (a *App) ready(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, map[string]any{"status": "ok", "migration": v})
 }
 
-// pruneLoop trims the replay log hourly.
+// pruneLoop trims the replay log and sweeps orphaned uploads hourly.
 func (a *App) pruneLoop(ctx context.Context) {
 	t := time.NewTicker(time.Hour)
 	defer t.Stop()
@@ -174,6 +180,11 @@ func (a *App) pruneLoop(ctx context.Context) {
 			a.deps.Logger.Error("prune events", "err", err)
 		} else if n > 0 {
 			a.deps.Logger.Info("pruned events", "rows", n)
+		}
+		if n, err := a.Files.Sweep(ctx); err != nil && ctx.Err() == nil {
+			a.deps.Logger.Error("sweep uploads", "err", err)
+		} else if n > 0 {
+			a.deps.Logger.Info("swept orphaned uploads", "files", n)
 		}
 		select {
 		case <-ctx.Done():

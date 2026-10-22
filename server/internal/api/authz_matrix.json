@@ -1,5 +1,5 @@
 {
-  "_comment": "Principals: anon (no token), bogus (invalid token), alice, bob, carol, mallory, dave. World: alice, bob, carol, mallory, dave. Group {g} = alice (owner), bob (admin), carol (member), dave (removed after one message: a former member); {xID} is user x's id. Rows run in order and the last ones mutate {g}. DM {ab} = alice+bob. DM {am} = alice+mallory, then alice blocked mallory. {aliceSession} is one of alice's session ids. Every REST route must appear here.",
+  "_comment": "Principals: anon (no token), bogus (invalid token), alice, bob, carol, mallory, dave. World: alice, bob, carol, mallory, dave. Group {g} = alice (owner), bob (admin), carol (member), dave (removed after one message: a former member); {xID} is user x's id. Files: {f} attached in {ab}; {gOld} posted in {g} before dave's removal, {gNew} after; {draft} is alice's unattached upload to {g}. Rows run in order and the last ones mutate {g}. DM {ab} = alice+bob. DM {am} = alice+mallory, then alice blocked mallory. {aliceSession} is one of alice's session ids. Every REST route must appear here.",
   "rows": [
     { "method": "GET", "path": "/v1/me", "as": "anon", "expect": 401 },
     { "method": "GET", "path": "/v1/me", "as": "alice", "expect": 200 },
@@ -73,6 +73,24 @@
     { "method": "POST", "path": "/v1/conversations/{g}/messages", "as": "dave", "body": { "client_id": "{uuid}", "kind": "text", "body": "hi" }, "expect": 404 },
     { "method": "POST", "path": "/v1/conversations/{g}/messages", "as": "mallory", "body": { "client_id": "{uuid}", "kind": "text", "body": "hi" }, "expect": 404 },
     { "method": "POST", "path": "/v1/conversations/{g}/read", "as": "dave", "body": { "seq": 99 }, "expect": 200 },
+
+    { "method": "POST", "path": "/v1/files?conversation_id={ab}", "as": "anon", "expect": 401 },
+    { "method": "POST", "path": "/v1/files?conversation_id={ab}", "as": "carol", "body": { "not": "multipart" }, "expect": 404 },
+    { "method": "POST", "path": "/v1/files?conversation_id={g}", "as": "dave", "body": { "not": "multipart" }, "expect": 404 },
+    { "method": "POST", "path": "/v1/files?conversation_id=not-a-uuid", "as": "alice", "expect": 404 },
+    { "method": "POST", "path": "/v1/files?conversation_id={ab}", "as": "bob", "body": { "not": "multipart" }, "expect": 400 },
+    { "method": "GET", "path": "/v1/files/{f}", "as": "anon", "expect": 401 },
+    { "method": "GET", "path": "/v1/files/{f}", "as": "bogus", "expect": 401 },
+    { "method": "GET", "path": "/v1/files/{f}", "as": "bob", "expect": 200 },
+    { "method": "GET", "path": "/v1/files/{f}", "as": "alice", "expect": 200 },
+    { "method": "GET", "path": "/v1/files/{f}", "as": "carol", "expect": 404 },
+    { "method": "GET", "path": "/v1/files/{f}", "as": "mallory", "expect": 404 },
+    { "method": "GET", "path": "/v1/files/{gOld}", "as": "dave", "expect": 200 },
+    { "method": "GET", "path": "/v1/files/{gNew}", "as": "dave", "expect": 404 },
+    { "method": "GET", "path": "/v1/files/{gNew}", "as": "carol", "expect": 200 },
+    { "method": "GET", "path": "/v1/files/{draft}", "as": "alice", "expect": 200 },
+    { "method": "GET", "path": "/v1/files/{draft}", "as": "bob", "expect": 404 },
+    { "method": "GET", "path": "/v1/files/not-a-uuid", "as": "alice", "expect": 404 },
 
     { "method": "PATCH", "path": "/v1/conversations/{g}", "as": "anon", "body": { "title": "x" }, "expect": 401 },
     { "method": "PATCH", "path": "/v1/conversations/{g}", "as": "carol", "body": { "title": "x" }, "expect": 403 },
