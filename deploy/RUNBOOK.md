@@ -145,7 +145,7 @@ closes live sockets within a second, and makes the account invisible to lookups 
 
 ## Recorded restore test
 
-Run 2026-10-22 ~12:56 UTC, `LUMA_TAG=02549b5 deploy/test-restore.sh`, image built from commit `02549b5`
+Run 2026-10-22 ~13:00 UTC, `LUMA_TAG=e50dae8 deploy/test-restore.sh`, image built from commit `e50dae8`
 (includes all security-review fixes). Compose progress lines omitted; `$WORK` is a throwaway directory.
 
 ```
@@ -156,7 +156,7 @@ preflight for project luma_staging
   ok    env file is mode 600
   ok    POSTGRES_PASSWORD is set and URL-safe
   ok    LUMA_BACKUP_RECIPIENT is an age public key
-  ok    image luma-server:02549b5 exists
+  ok    image luma-server:e50dae8 exists
   ok    image luma-backup exists
   ok    port 127.0.0.1:8791 is free
   ok    volume luma_staging_pgdata does not exist yet and will be created
@@ -175,21 +175,21 @@ source:   users=3 conversations=2 members=5 messages=29 files=3 user_events=87 m
 source files on disk: 3
 
 == backup
-backup $WORK/backups/luma-20261022T125442Z: 52K
+backup $WORK/backups/luma-20261022T125859Z: 52K
 total 52
--rw------- 1 folkes folkes 34398 Oct 22 12:54 luma-20261022T125442Z.dump.age
--rw------- 1 folkes folkes   201 Oct 22 12:54 luma-20261022T125442Z.sha256
--rw------- 1 folkes folkes  9416 Oct 22 12:54 luma-20261022T125442Z.uploads.tar.age
+-rw------- 1 folkes folkes 34380 Oct 22 12:58 luma-20261022T125859Z.dump.age
+-rw------- 1 folkes folkes   201 Oct 22 12:59 luma-20261022T125859Z.sha256
+-rw------- 1 folkes folkes  9416 Oct 22 12:59 luma-20261022T125859Z.uploads.tar.age
 dump is encrypted (no plaintext message bodies)
 
 == restore into luma_restore_test
-restored $WORK/backups/luma-20261022T125442Z into luma_restore_test (127.0.0.1:8792)
+restored $WORK/backups/luma-20261022T125859Z into luma_restore_test (127.0.0.1:8792)
 
 == compare
 restored: users=3 conversations=2 members=5 messages=29 files=3 user_events=87 max_seq=24 migration=4
 database counts match
 upload files match byte for byte (3 files, sha256)
-verified via API: history {'86a00ad6-d22b-42eb-8d6b-e988ab9d83be': 24, 'd28c6bdd-239f-41f2-ade7-26198b988f3b': 5}, 3 files byte-identical, window enforced, search ok
+verified via API: history {'2e5a20d3-9ec6-4999-87f3-41ebfa42a8ba': 24, '5825caaf-8e1d-4a2b-9f31-f00c74c7b198': 5}, 3 files byte-identical, window enforced, search ok
 
 == tampered backup is refused
 checksum mismatch detected, nothing restored
