@@ -352,3 +352,34 @@ func TestLogin_PerAccountLimit(t *testing.T) {
 		t.Fatalf("draining one known address locked out another: %d", st)
 	}
 }
+
+// Review finding: however many known addresses an account has, attempts from all of them
+// together stay under one per-username ceiling (300/hour).
+func TestLogin_KnownAddressesShareACeiling(t *testing.T) {
+	h := newHarness(t, func(d *api.Deps) {
+		d.Config.TrustedProxies = []netip.Prefix{netip.MustParsePrefix("127.0.0.0/8")}
+	})
+	h.register("alice")
+	login := func(pw, ip string) int {
+		return h.do("POST", "/v1/auth/login", "", map[string]any{"username": "alice", "password": pw}, "CF-Connecting-IP", ip).Status
+	}
+	ips := []string{"198.51.100.1", "198.51.100.2", "198.51.100.3", "198.51.100.4"}
+	for _, ip := range ips {
+		if st := login("password-alice", ip); st != 200 { // makes each address known
+			t.Fatalf("login from %s: %d", ip, st)
+		}
+	}
+	allowed := 0
+	for _, ip := range ips {
+		for i := 0; i < 100; i++ {
+			if st := login("wrong-password", ip); st == 401 {
+				allowed++
+			} else if st != 429 {
+				t.Fatalf("%s: %d", ip, st)
+			}
+		}
+	}
+	if allowed != 300 {
+		t.Fatalf("%d failed attempts allowed across 4 known addresses, want 300 (the per-username total)", allowed)
+	}
+}

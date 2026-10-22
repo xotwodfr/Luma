@@ -20,27 +20,31 @@ const (
 	keyUser
 )
 
-// ClientIP returns the caller's IP. Proxy headers are honoured only when the TCP peer is
-// in a trusted prefix, i.e. the request came through Caddy on this host.
+// ClientIP returns the caller's IP in canonical form (lowercase, compressed IPv6, IPv4-mapped
+// unwrapped), so every spelling of one address is the same rate-limit key. Proxy headers are
+// honoured only when the TCP peer is in a trusted prefix, i.e. the request came through Caddy.
 func ClientIP(r *http.Request, trusted []netip.Prefix) string {
 	host, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {
 		host = r.RemoteAddr
 	}
-	if peer, err := netip.ParseAddr(host); err == nil && len(trusted) > 0 {
-		if slices.ContainsFunc(trusted, func(p netip.Prefix) bool { return p.Contains(peer.Unmap()) }) {
-			if cf := strings.TrimSpace(r.Header.Get("CF-Connecting-IP")); net.ParseIP(cf) != nil {
-				return cf
-			}
-			// Right-most entry: the address Caddy itself saw. Entries to its left are client-supplied.
-			if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
-				if ip := strings.TrimSpace(xff[strings.LastIndex(xff, ",")+1:]); net.ParseIP(ip) != nil {
-					return ip
-				}
+	peer, err := netip.ParseAddr(host)
+	if err != nil {
+		return host
+	}
+	peer = peer.Unmap().WithZone("")
+	if slices.ContainsFunc(trusted, func(p netip.Prefix) bool { return p.Contains(peer) }) {
+		if cf, err := netip.ParseAddr(strings.TrimSpace(r.Header.Get("CF-Connecting-IP"))); err == nil {
+			return cf.Unmap().WithZone("").String()
+		}
+		// Right-most entry: the address Caddy itself saw. Entries to its left are client-supplied.
+		if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
+			if ip, err := netip.ParseAddr(strings.TrimSpace(xff[strings.LastIndex(xff, ",")+1:])); err == nil {
+				return ip.Unmap().WithZone("").String()
 			}
 		}
 	}
-	return host
+	return peer.String()
 }
 
 type statusWriter struct {

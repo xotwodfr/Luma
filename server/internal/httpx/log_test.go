@@ -28,8 +28,24 @@ func TestClientIP_OnlyTrustedPeersMayForward(t *testing.T) {
 			t.Errorf("peer %s: got %s, want %s", c.peer, got, c.want)
 		}
 	}
-	// Without CF-Connecting-IP, only the hop Caddy appended counts, not what the client sent.
+	// Every spelling of one address is one key (review finding: otherwise each spelling of an
+	// IPv6 address got its own login bucket).
+	for _, spelling := range []string{"2001:DB8:0::1", "2001:db8:0:0:0:0:0:1", " 2001:db8::1 "} {
+		r := httptest.NewRequest("GET", "/", nil)
+		r.RemoteAddr = "172.16.79.1:5000"
+		r.Header.Set("CF-Connecting-IP", spelling)
+		if got := ClientIP(r, gw); got != "2001:db8::1" {
+			t.Errorf("%q: got %q, want 2001:db8::1", spelling, got)
+		}
+	}
 	r := httptest.NewRequest("GET", "/", nil)
+	r.RemoteAddr = "172.16.79.1:5000"
+	r.Header.Set("CF-Connecting-IP", "::ffff:203.0.113.9")
+	if got := ClientIP(r, gw); got != "203.0.113.9" {
+		t.Errorf("IPv4-mapped: got %q", got)
+	}
+	// Without CF-Connecting-IP, only the hop Caddy appended counts, not what the client sent.
+	r = httptest.NewRequest("GET", "/", nil)
 	r.RemoteAddr = "172.16.79.1:5000"
 	r.Header.Set("X-Forwarded-For", "1.2.3.4, 198.51.100.20")
 	if got := ClientIP(r, gw); got != "198.51.100.20" {

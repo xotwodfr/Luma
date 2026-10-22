@@ -18,9 +18,10 @@ type Handlers struct {
 	Svc          *Service
 	Limit        *httpx.Limiter
 	AccountLimit *httpx.Limiter
-	// KnownAccountLimit is the per-(username, address) bucket for addresses that held a session before.
-	KnownAccountLimit *httpx.Limiter
-	TrustedProxies    []netip.Prefix
+	// KnownAccountLimit is the per-(username, address) bucket for addresses that held a session
+	// before; KnownAccountTotal caps all of an account's known addresses together.
+	KnownAccountLimit, KnownAccountTotal *httpx.Limiter
+	TrustedProxies                       []netip.Prefix
 }
 
 func (h *Handlers) device(r *http.Request, name, platform string) Device {
@@ -65,18 +66,19 @@ func (h *Handlers) Login(w http.ResponseWriter, r *http.Request) {
 	}
 	dev := h.device(r, in.DeviceName, in.Platform)
 	// A strict per-username bucket for addresses that never held a session for this account, and
-	// a larger but finite bucket per (username, known address). Strangers can't lock the owner out
+	// a larger but finite bucket per (username, known address) under a per-username total. Strangers can't lock the owner out
 	// of their usual networks, and a forged "known" IP still can't guess without limit.
 	known, err := h.Svc.KnownIP(r.Context(), in.Username, dev.IP)
 	if err != nil {
 		httpx.Fail(w, r, err)
 		return
 	}
-	bucket, key := h.AccountLimit, NormalizeUsername(in.Username)
-	if known { // per (account, address): draining one known address doesn't block the others
-		bucket, key = h.KnownAccountLimit, key+"|"+dev.IP
-	}
-	if !bucket.Limit(w, key) {
+	name := NormalizeUsername(in.Username)
+	if known { // per (account, address), plus a ceiling across all of the account's known addresses
+		if !h.KnownAccountLimit.Limit(w, name+"|"+dev.IP) || !h.KnownAccountTotal.Limit(w, name) {
+			return
+		}
+	} else if !h.AccountLimit.Limit(w, name) {
 		return
 	}
 	token, u, err := h.Svc.Login(r.Context(), in.Username, in.Password, dev)

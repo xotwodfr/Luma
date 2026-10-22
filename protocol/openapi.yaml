@@ -47,7 +47,7 @@ paths:
       description: |
         Unknown usernames and wrong passwords get identical responses and timing. 10 attempts per minute per
         client IP; also, per username, 30 per hour from addresses that never held a session for that account
-        and 100 per hour per known address (429 with Retry-After). Unknown usernames behave the same.
+        and 100 per hour per known address, at most 300 per hour across all known addresses (429 with Retry-After). Unknown usernames behave the same.
       security: []
       requestBody:
         required: true
