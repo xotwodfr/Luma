@@ -77,8 +77,9 @@ func AccessLog(lg *slog.Logger, next http.Handler) http.Handler {
 		sw := &statusWriter{ResponseWriter: w, status: 200}
 		start := time.Now()
 		w.Header().Set("X-Request-Id", id)
-		next.ServeHTTP(sw, r.WithContext(ctx))
-		lg.Info("request", "req", id, "method", r.Method, "route", r.Pattern, "status", sw.status,
+		inner := r.WithContext(ctx) // ServeMux records the matched pattern on this copy
+		next.ServeHTTP(sw, inner)
+		lg.Info("request", "req", id, "method", r.Method, "route", inner.Pattern, "status", sw.status,
 			"ms", time.Since(start).Milliseconds(), "user", slot.id)
 	})
 }

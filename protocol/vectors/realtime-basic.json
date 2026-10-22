@@ -1,0 +1,20 @@
+{
+  "description": "Two users in a DM: connect, send, receive, read receipt, ping. Variables: $dm (conversation id), $uuid1 (a fresh client_id). An expect step waits for the first frame on that actor's socket matching every dotted path; other frames (presence) are skipped.",
+  "setup": { "users": ["alice", "bob"], "dm": ["alice", "bob"] },
+  "steps": [
+    { "actor": "bob", "connect": { "cursor": 0 }, "replayed": [{ "t": "event", "d.seq": 1, "d.type": "conversation.created", "d.data.conversation_id": "$dm" }], "ready": { "d.cursor": 1, "d.user.username": "bob" } },
+    { "actor": "alice", "connect": { "cursor": 1 }, "replayed": [], "ready": { "d.cursor": 1, "d.user.username": "alice" } },
+    { "actor": "alice", "send": { "t": "send", "id": "s1", "d": { "conversation_id": "$dm", "client_id": "$uuid1", "kind": "text", "body": "Are we still on for the lake?" } } },
+    { "actor": "alice", "expect": { "t": "ack", "id": "s1", "d.message.seq": 1, "d.message.client_id": "$uuid1", "d.message.body": "Are we still on for the lake?" } },
+    { "actor": "bob", "expect": { "t": "event", "d.seq": 2, "d.type": "message.created", "d.data.message.seq": 1, "d.data.message.body": "Are we still on for the lake?" } },
+    { "actor": "alice", "send": { "t": "send", "id": "s1-retry", "d": { "conversation_id": "$dm", "client_id": "$uuid1", "kind": "text", "body": "Are we still on for the lake?" } } },
+    { "actor": "alice", "expect": { "t": "ack", "id": "s1-retry", "d.message.seq": 1 } },
+    { "actor": "bob", "send": { "t": "read", "id": "r1", "d": { "conversation_id": "$dm", "seq": 1 } } },
+    { "actor": "bob", "expect": { "t": "ack", "id": "r1", "d.last_read_seq": 1 } },
+    { "actor": "alice", "expect": { "t": "event", "d.type": "receipt.updated", "d.data.last_read_seq": 1, "d.data.last_delivered_seq": 1 } },
+    { "actor": "bob", "send": { "t": "send", "id": "s2", "d": { "conversation_id": "$dm", "client_id": "$uuid2", "kind": "text", "body": "" } } },
+    { "actor": "bob", "expect": { "t": "error", "id": "s2", "d.code": "invalid_message" } },
+    { "actor": "alice", "send": { "t": "ping", "id": "p1" } },
+    { "actor": "alice", "expect": { "t": "pong", "id": "p1" } }
+  ]
+}

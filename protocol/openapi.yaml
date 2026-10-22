@@ -1,0 +1,260 @@
+openapi: 3.1.0
+info:
+  title: Luma API
+  version: 0.1.0
+  description: |
+    REST API of the Luma messaging server. Real-time delivery uses the WebSocket protocol in
+    `realtime.md`. All bodies are JSON (max 64 KiB, unknown fields rejected). Errors always have the
+    shape `{"error": {"code": "snake_case", "message": "…"}}`; clients branch on `code`, never on `message`.
+
+    Security: TLS in transit (Cloudflare → tunnel → Caddy → server on loopback). Luma v1 is NOT
+    end-to-end encrypted: the server operator can read messages.
+servers:
+  - url: https://chat.folk3s.com
+security:
+  - bearer: []
+
+paths:
+  /v1/health/live:
+    get:
+      summary: Process is up
+      security: []
+      responses: { "200": { description: OK } }
+  /v1/health/ready:
+    get:
+      summary: Database reachable, schema current, upload dir writable
+      security: []
+      responses:
+        "200": { description: Ready, content: { application/json: { schema: { type: object, properties: { status: { const: ok }, migration: { type: integer } } } } } }
+        "503": { description: Not ready }
+
+  /v1/auth/register:
+    post:
+      summary: Create an account (needs an invite unless registration is open) and its first session
+      security: []
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/RegisterRequest" } } }
+      responses:
+        "201": { description: Created, content: { application/json: { schema: { $ref: "#/components/schemas/AuthResponse" } } } }
+        "400": { $ref: "#/components/responses/Error", description: "invalid_invite | invalid_username | invalid_display_name | invalid_password | invalid_request" }
+        "403": { $ref: "#/components/responses/Error", description: registration_closed }
+        "409": { $ref: "#/components/responses/Error", description: "username_unavailable (only reported after a valid invite)" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/auth/login:
+    post:
+      summary: Exchange credentials for a session token
+      description: Unknown usernames and wrong passwords get identical responses and timing.
+      security: []
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/LoginRequest" } } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/AuthResponse" } } } }
+        "401": { $ref: "#/components/responses/Error", description: invalid_credentials }
+        "403": { $ref: "#/components/responses/Error", description: account_disabled }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/auth/logout:
+    post:
+      summary: Revoke the current session
+      responses: { "204": { description: Revoked }, "401": { $ref: "#/components/responses/Unauthorized" } }
+  /v1/auth/sessions:
+    get:
+      summary: List the caller's live sessions
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: object, properties: { sessions: { type: array, items: { $ref: "#/components/schemas/Session" } } } } } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+  /v1/auth/sessions/{id}:
+    delete:
+      summary: Revoke one of the caller's sessions (closes its sockets immediately)
+      parameters: [{ $ref: "#/components/parameters/id" }]
+      responses: { "204": { description: Revoked }, "404": { $ref: "#/components/responses/NotFound" } }
+  /v1/auth/sessions/revoke-others:
+    post:
+      summary: Revoke every session except the current one
+      responses: { "204": { description: Revoked } }
+  /v1/invites:
+    post:
+      summary: Create a single-use invite (7 days, at most 5 unused per user)
+      responses:
+        "201": { description: Created, content: { application/json: { schema: { type: object, properties: { code: { type: string, example: K3QX-9MZA-T7PL-2WBD }, expires_at: { type: string, format: date-time } } } } } }
+        "429": { $ref: "#/components/responses/Error", description: invite_limit }
+
+  /v1/me:
+    get:
+      summary: The caller's profile
+      responses: { "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Me" } } } } }
+    patch:
+      summary: Update display name
+      requestBody: { required: true, content: { application/json: { schema: { type: object, properties: { display_name: { type: string, minLength: 1, maxLength: 64 } } } } } }
+      responses: { "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Me" } } } }, "400": { $ref: "#/components/responses/Error" } }
+  /v1/me/password:
+    post:
+      summary: Change password; revokes every other session
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [current_password, new_password], properties: { current_password: { type: string }, new_password: { type: string, minLength: 10, maxLength: 256 } } } } } }
+      responses: { "204": { description: Changed }, "401": { $ref: "#/components/responses/Error", description: invalid_credentials } }
+
+  /v1/users/{username}:
+    get:
+      summary: Find a person by exact username (case-insensitive)
+      description: Disabled users and users who blocked the caller return the same 404 as nonexistent ones.
+      parameters: [{ $ref: "#/components/parameters/username" }]
+      responses: { "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Profile" } } } }, "404": { $ref: "#/components/responses/NotFound" } }
+  /v1/users/{username}/block:
+    post:
+      summary: Block a person (idempotent). Blocks DMs, group adds, typing and presence both ways.
+      parameters: [{ $ref: "#/components/parameters/username" }]
+      responses: { "204": { description: Blocked }, "404": { $ref: "#/components/responses/NotFound" } }
+    delete:
+      summary: Unblock
+      parameters: [{ $ref: "#/components/parameters/username" }]
+      responses: { "204": { description: Unblocked } }
+
+  /v1/conversations:
+    get:
+      summary: The caller's conversations, most recent activity first
+      responses: { "200": { description: OK, content: { application/json: { schema: { type: object, properties: { conversations: { type: array, items: { $ref: "#/components/schemas/Conversation" } } } } } } } }
+    post:
+      summary: Open (or return the existing) direct conversation with a username
+      description: Rate limited to 20 new conversations per day per user. Blocked-either-way returns 404.
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [kind, username], properties: { kind: { const: direct }, username: { type: string } } } } } }
+      responses: { "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Conversation" } } } }, "404": { $ref: "#/components/responses/NotFound" }, "429": { $ref: "#/components/responses/RateLimited" } }
+  /v1/conversations/{id}:
+    get:
+      summary: One conversation as seen by the caller
+      parameters: [{ $ref: "#/components/parameters/id" }]
+      responses: { "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Conversation" } } } }, "404": { $ref: "#/components/responses/NotFound" } }
+  /v1/conversations/{id}/messages:
+    get:
+      summary: Page through visible history (ascending by seq)
+      description: Bounds are exclusive. With neither bound, the latest page. A member only sees messages from after they joined.
+      parameters:
+        - { $ref: "#/components/parameters/id" }
+        - { name: before_seq, in: query, schema: { type: integer, minimum: 1 } }
+        - { name: after_seq, in: query, schema: { type: integer, minimum: 1 } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 50 } }
+      responses: { "200": { description: OK, content: { application/json: { schema: { type: object, properties: { messages: { type: array, items: { $ref: "#/components/schemas/Message" } } } } } } }, "404": { $ref: "#/components/responses/NotFound" } }
+    post:
+      summary: Send a message (idempotent on client_id)
+      description: |
+        201 when created, 200 when the same (sender, client_id) was already accepted — the original
+        message is returned unchanged. A response is only sent after the database commit.
+        Shares a 30-per-10-seconds bucket with WebSocket sends.
+      parameters: [{ $ref: "#/components/parameters/id" }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/SendRequest" } } } }
+      responses:
+        "201": { description: Created, content: { application/json: { schema: { $ref: "#/components/schemas/Message" } } } }
+        "200": { description: Already accepted, content: { application/json: { schema: { $ref: "#/components/schemas/Message" } } } }
+        "400": { $ref: "#/components/responses/Error", description: invalid_message }
+        "403": { $ref: "#/components/responses/Error", description: "blocked (direct conversation where either side blocked the other)" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Error", description: client_id_conflict }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /v1/conversations/{id}/read:
+    post:
+      summary: Advance the caller's read watermark (monotonic, clamped). Implies delivered.
+      parameters: [{ $ref: "#/components/parameters/id" }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [seq], properties: { seq: { type: integer } } } } } }
+      responses: { "200": { description: OK, content: { application/json: { schema: { type: object, properties: { last_read_seq: { type: integer } } } } } } }
+
+  /v1/realtime:
+    get:
+      summary: WebSocket upgrade — see realtime.md
+      description: Auth via Authorization header or the first `hello` frame. A plain GET gets 426.
+      responses: { "101": { description: Switching protocols }, "401": { $ref: "#/components/responses/Unauthorized" }, "426": { description: Upgrade required } }
+
+components:
+  securitySchemes:
+    bearer: { type: http, scheme: bearer, description: "Opaque 256-bit session token; sliding expiry after 90 days idle." }
+  parameters:
+    id: { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    username: { name: username, in: path, required: true, schema: { type: string } }
+  responses:
+    Error: { description: Error, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+    Unauthorized: { description: unauthorized, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+    NotFound: { description: not_found (also used when access is denied, so existence never leaks), content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+    RateLimited: { description: rate_limited, headers: { Retry-After: { schema: { type: integer } } }, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+  schemas:
+    Error:
+      type: object
+      properties: { error: { type: object, properties: { code: { type: string }, message: { type: string } } } }
+    RegisterRequest:
+      type: object
+      required: [username, display_name, password]
+      properties:
+        invite: { type: string, description: "Case, dashes and spaces are ignored" }
+        username: { type: string, pattern: "^[a-zA-Z0-9_]{3,24}$", description: "Stored lowercased" }
+        display_name: { type: string, minLength: 1, maxLength: 64 }
+        password: { type: string, minLength: 10, maxLength: 256 }
+        device_name: { type: string, maxLength: 64 }
+        platform: { enum: [ios, macos, android, windows, linux, test] }
+    LoginRequest:
+      type: object
+      required: [username, password]
+      properties: { username: { type: string }, password: { type: string }, device_name: { type: string }, platform: { type: string } }
+    AuthResponse:
+      type: object
+      properties: { token: { type: string, description: "Shown once; store in the platform keychain" }, user: { $ref: "#/components/schemas/Profile" } }
+    Profile:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        username: { type: string }
+        display_name: { type: string }
+        created_at: { type: string, format: date-time }
+        blocked: { type: boolean, description: "Present and true when the caller blocked this person" }
+    Me:
+      allOf: [{ $ref: "#/components/schemas/Profile" }, { type: object, properties: { is_admin: { type: boolean } } }]
+    Session:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        device_name: { type: string }
+        platform: { type: string }
+        created_at: { type: string, format: date-time }
+        last_seen_at: { type: string, format: date-time }
+        current: { type: boolean }
+    Member:
+      type: object
+      properties:
+        user_id: { type: string, format: uuid }
+        username: { type: string }
+        display_name: { type: string }
+        role: { enum: [owner, admin, member] }
+        last_read_seq: { type: integer }
+        last_delivered_seq: { type: integer }
+    Conversation:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        kind: { enum: [direct, group] }
+        title: { type: [string, "null"] }
+        created_at: { type: string, format: date-time }
+        last_seq: { type: integer, description: "Highest seq visible to the caller" }
+        last_activity_at: { type: string, format: date-time }
+        last_read_seq: { type: integer }
+        unread: { type: integer }
+        muted: { type: boolean }
+        archived: { type: boolean }
+        left: { type: boolean }
+        last_message: { oneOf: [{ $ref: "#/components/schemas/Message" }, { type: "null" }] }
+        members: { type: array, items: { $ref: "#/components/schemas/Member" } }
+    Message:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        conversation_id: { type: string, format: uuid }
+        seq: { type: integer, description: "Gap-free, per conversation, starting at 1" }
+        sender_id: { type: string, format: uuid }
+        client_id: { type: string, format: uuid }
+        kind: { enum: [text, file, system] }
+        body: { type: string, maxLength: 8000 }
+        meta: { type: object, description: "Extension envelope: attachments now; replies, reactions, voice later" }
+        created_at: { type: string, format: date-time }
+    SendRequest:
+      type: object
+      required: [client_id, kind, body]
+      properties:
+        client_id: { type: string, format: uuid, description: "Generated by the client once per message and reused on every retry" }
+        kind: { const: text }
+        body: { type: string, minLength: 1, maxLength: 8000 }
