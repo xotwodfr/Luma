@@ -1,0 +1,11 @@
+{
+  "name": "luma-design",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test tools/*.test.mjs",
+    "contrast": "node tools/contrast.mjs",
+    "generate": "node tools/generate.mjs generated",
+    "shoot": "node tools/shoot.mjs"
+  }
+}
