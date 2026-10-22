@@ -57,8 +57,8 @@ func TestUsers_BlockEdgeCases(t *testing.T) {
 	if r := h.do("POST", "/v1/users/alice/block", a.Token, nil); r.Status != 400 {
 		t.Fatalf("self block: %d", r.Status)
 	}
-	if r := h.do("POST", "/v1/users/nobody_xyz/block", a.Token, nil); r.Status != 404 {
-		t.Fatalf("block unknown: %d", r.Status)
+	if r := h.do("POST", "/v1/users/nobody_xyz/block", a.Token, nil); r.Status != 204 {
+		t.Fatalf("block unknown must look like success (no existence leak): %d", r.Status)
 	}
 	h.register("bob")
 	for i := 0; i < 2; i++ {
@@ -79,5 +79,20 @@ func TestMe_Update(t *testing.T) {
 		if r := h.do("PATCH", "/v1/me", a.Token, map[string]any{"display_name": bad}); r.Status != 400 {
 			t.Errorf("display name %q accepted: %d", bad, r.Status)
 		}
+	}
+}
+
+// Review finding #7: you can block someone who blocked you first.
+func TestUsers_BlockBack(t *testing.T) {
+	h := newHarness(t)
+	a := h.register("alice")
+	b := h.register("bob")
+	h.do("POST", "/v1/users/alice/block", b.Token, nil)
+	if r := h.do("POST", "/v1/users/bob/block", a.Token, nil); r.Status != 204 {
+		t.Fatalf("block back: %d", r.Status)
+	}
+	h.do("DELETE", "/v1/users/alice/block", b.Token, nil)
+	if r := h.do("GET", "/v1/users/alice", b.Token, nil); r.Status != 404 {
+		t.Fatalf("alice's own block must still hide her from bob: %d", r.Status)
 	}
 }

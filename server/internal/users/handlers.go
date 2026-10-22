@@ -7,7 +7,11 @@ import (
 	"luma.folk3s.com/server/internal/httpx"
 )
 
-type Handlers struct{ Svc *Service }
+type Handlers struct {
+	Svc *Service
+	// LookupLimit throttles username probing per user.
+	LookupLimit *httpx.Limiter
+}
 
 func (h *Handlers) GetMe(w http.ResponseWriter, r *http.Request) {
 	me, err := h.Svc.Me(r.Context(), auth.MustPrincipal(r).UserID)
@@ -39,6 +43,9 @@ func (h *Handlers) PatchMe(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handlers) Lookup(w http.ResponseWriter, r *http.Request) {
+	if h.LookupLimit != nil && !h.LookupLimit.Limit(w, auth.MustPrincipal(r).UserID.String()) {
+		return
+	}
 	p, err := h.Svc.Lookup(r.Context(), auth.MustPrincipal(r).UserID, r.PathValue("username"))
 	if err != nil {
 		httpx.Fail(w, r, err)

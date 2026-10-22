@@ -1,7 +1,7 @@
 # Luma realtime protocol (v1)
 
 `GET wss://chat.folk3s.com/v1/realtime`, upgraded to a WebSocket. Every frame is a UTF-8 JSON text
-message of at most 64 KiB:
+message of at most 128 KiB:
 
 ```json
 { "t": "<type>", "id": "<optional request id>", "d": { … } }
@@ -14,7 +14,9 @@ message of at most 64 KiB:
 1. Open the socket. If the platform can set handshake headers, send `Authorization: Bearer <token>`.
    An invalid header token is rejected with HTTP 401 before the upgrade.
 2. The first frame **must** be `hello` and arrive within 10 s:
-   `{"t":"hello","d":{"token":"<token, if not in the header>","cursor":<last applied event seq, 0 if none>}}`
+   `{"t":"hello","d":{"token":"<token, if not in the header>","cursor":<last applied event seq>}}`.
+   A fresh install with no local state sends `"cursor": null`. It gets `resync_required` with the current
+   cursor (instead of replaying the whole account history), loads state over REST, and continues from there.
 3. The server replays every stored event after `cursor` as `event` frames, in order, then sends
    `{"t":"ready","d":{"cursor":<n>,"user":{"id","username","display_name"}}}`.
 4. Presence frames for current conversation partners follow, then live traffic.

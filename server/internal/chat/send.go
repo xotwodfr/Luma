@@ -28,6 +28,10 @@ func (in SendInput) validate() error {
 	if in.ClientID == uuid.Nil || in.Kind != "text" || !utf8.ValidString(in.Body) || strings.ContainsRune(in.Body, 0) {
 		return errInvalidMessage
 	}
+	// meta is reserved for server-validated envelopes (attachments arrive in M4); clients can't set it yet.
+	if m := strings.TrimSpace(string(in.Meta)); m != "" && m != "{}" && m != "null" {
+		return errInvalidMessage
+	}
 	if n := utf8.RuneCountInString(in.Body); n == 0 || n > MaxBodyChars || strings.TrimSpace(in.Body) == "" {
 		return errInvalidMessage
 	}
@@ -49,9 +53,7 @@ func (s *Service) Send(ctx context.Context, me uuid.UUID, in SendInput) (Message
 	if err := in.validate(); err != nil {
 		return Message{}, false, err
 	}
-	if len(in.Meta) == 0 {
-		in.Meta = json.RawMessage(`{}`)
-	}
+	in.Meta = json.RawMessage(`{}`)
 	return s.send(ctx, me, in)
 }
 
@@ -64,7 +66,7 @@ func (s *Service) send(ctx context.Context, me uuid.UUID, in SendInput) (Message
 
 	var kind string
 	err = tx.QueryRow(ctx, `SELECT c.kind FROM conversations c JOIN members m ON m.conversation_id = c.id
-		WHERE c.id = $1 AND m.user_id = $2 AND m.left_at IS NULL FOR UPDATE OF c`, in.ConversationID, me).Scan(&kind)
+		WHERE c.id = $1 AND m.user_id = $2 AND m.left_at IS NULL FOR NO KEY UPDATE OF c`, in.ConversationID, me).Scan(&kind)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Message{}, false, httpx.ErrNotFound
 	} else if err != nil {

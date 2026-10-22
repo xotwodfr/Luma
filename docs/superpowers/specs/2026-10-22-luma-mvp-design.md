@@ -301,6 +301,9 @@ Each milestone ends with: working code, test output, verification matrix, known 
   1. Check membership/visibility/block.
   2. `INSERT … ON CONFLICT (sender_id, client_id) DO NOTHING RETURNING`. On conflict, select the
      existing message and return it unchanged, without bumping seq or writing new events.
+     **Row locks use `FOR NO KEY UPDATE`, never `FOR UPDATE`.** FK checks on INSERT take `KEY SHARE` on the
+     referenced users and conversations rows, which `FOR UPDATE` conflicts with. Using `FOR UPDATE` here caused a
+     proven send-vs-receipt deadlock that was found in review and is covered by `TestSend_NoDeadlockWithReceipts`.
   3. `UPDATE conversations SET last_seq=last_seq+1 RETURNING last_seq` (row lock serialises per
      conversation). Because conflict detection comes first, retries never burn seq numbers.
   4. Write the message with that seq.

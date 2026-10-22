@@ -8,7 +8,7 @@ import (
 )
 
 // MaxJSONBody caps every JSON request body.
-const MaxJSONBody = 64 << 10
+const MaxJSONBody = 128 << 10 // fits 8000 chars even when every one is \u-escaped as a surrogate pair
 
 // DecodeJSON reads exactly one JSON object of at most MaxJSONBody bytes, rejecting unknown fields.
 func DecodeJSON(w http.ResponseWriter, r *http.Request, v any) error {

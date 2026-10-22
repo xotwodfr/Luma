@@ -19,6 +19,9 @@ import (
 )
 
 const (
+	// RevokeChannel is the Postgres NOTIFY channel carrying revoked session ids.
+	RevokeChannel = "luma_revoke"
+
 	SessionIdleExpiry   = 90 * 24 * time.Hour
 	InviteTTL           = 7 * 24 * time.Hour
 	MaxOpenUserInvites  = 5
@@ -265,6 +268,12 @@ func (s *Service) revoke(ctx context.Context, where string, args ...any) (int, e
 	if err != nil {
 		return 0, err
 	}
+	if len(ids) > 0 {
+		// Other processes (the admin CLI, future server instances) close their sockets via NOTIFY.
+		if _, err := s.pool.Exec(ctx, `SELECT pg_notify('`+RevokeChannel+`', x::text) FROM unnest($1::uuid[]) x`, ids); err != nil {
+			return len(ids), err
+		}
+	}
 	if s.OnRevoke != nil {
 		for _, id := range ids {
 			s.OnRevoke(id)
@@ -343,7 +352,7 @@ func (s *Service) CreateInvite(ctx context.Context, p Principal) (string, time.T
 	}
 	defer tx.Rollback(ctx)
 	// Lock the user row so concurrent requests can't both pass the quota check.
-	if _, err := tx.Exec(ctx, `SELECT 1 FROM users WHERE id = $1 FOR UPDATE`, p.UserID); err != nil {
+	if _, err := tx.Exec(ctx, `SELECT 1 FROM users WHERE id = $1 FOR NO KEY UPDATE`, p.UserID); err != nil {
 		return "", time.Time{}, err
 	}
 	var open int

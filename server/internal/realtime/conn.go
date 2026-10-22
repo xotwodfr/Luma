@@ -28,7 +28,7 @@ const (
 	pingInterval  = 25 * time.Second
 	pingTimeout   = 35 * time.Second
 	writeTimeout  = 10 * time.Second
-	maxFrameBytes = 64 << 10
+	maxFrameBytes = 128 << 10
 )
 
 // frame is the wire envelope: {"t": type, "id": request id, "d": payload}.
@@ -103,7 +103,7 @@ func (h *Hub) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	var hello struct {
 		Token  string `json:"token"`
-		Cursor int64  `json:"cursor"`
+		Cursor *int64 `json:"cursor"` // null: fresh client, no replay
 	}
 	var in inFrame
 	if json.Unmarshal(data, &in) != nil || in.T != "hello" || json.Unmarshal(in.D, &hello) != nil {
@@ -139,7 +139,9 @@ func (h *Hub) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		now := time.Now().UTC()
 		bg, done := context.WithTimeout(context.Background(), 5*time.Second)
 		_, _ = h.o.Pool.Exec(bg, `UPDATE users SET last_seen_at = $2 WHERE id = $1`, p.UserID, now)
-		h.broadcastPresence(bg, p.UserID, false, &now)
+		if !h.online(p.UserID) { // a fast reconnect may already have announced "online"
+			h.broadcastPresence(bg, p.UserID, false, &now)
+		}
 		done()
 	}
 }
@@ -187,7 +189,7 @@ func (c *conn) catchUp(through int64) error {
 // then delivers live items in seq order. Per user, event seqs commit in order (the user row lock
 // is held until COMMIT), but post-commit callbacks can arrive out of order — so a gap triggers a
 // catch-up from the database instead of dropping or reordering.
-func (c *conn) writer(cursor int64) {
+func (c *conn) writer(cursor *int64) {
 	defer c.close(websocket.StatusInternalError, "write failed")
 	ctx := c.ctx
 	chatSvc := c.hub.o.Chat
@@ -196,13 +198,13 @@ func (c *conn) writer(cursor int64) {
 	if err := errors.Join(err1, err2); err != nil {
 		return
 	}
-	if cursor < oldest || cursor > current {
+	if cursor == nil || *cursor < oldest || *cursor > current {
 		c.lastSent = current
 		if c.write(frame{T: "resync_required", D: map[string]int64{"cursor": current}}) != nil {
 			return
 		}
 	} else {
-		c.lastSent = cursor
+		c.lastSent = *cursor
 		if c.catchUp(0) != nil {
 			return
 		}

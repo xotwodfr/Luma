@@ -40,6 +40,7 @@ type App struct {
 	deps    Deps
 	handler http.Handler
 	routes  []string
+	stop    context.CancelFunc
 }
 
 // Routes lists every registered "METHOD /pattern" (used by the authorization-matrix coverage test).
@@ -56,18 +57,23 @@ func New(d Deps) *App {
 		d.AuthPerMinute = 10
 	}
 	authH := &auth.Handlers{Svc: a.Auth, Limit: httpx.NewLimiter(d.AuthPerMinute, time.Minute), TrustedProxy: d.Config.TrustedProxy}
-	usersH := &users.Handlers{Svc: a.Users}
+	lookupLimit := httpx.NewLimiter(60, time.Minute)
+	usersH := &users.Handlers{Svc: a.Users, LookupLimit: lookupLimit}
 	// One send bucket per user, shared by REST and WebSocket so neither path bypasses it.
 	if d.SendPer10s == 0 {
 		d.SendPer10s = 30
 	}
 	sendLimit := httpx.NewLimiter(d.SendPer10s, 10*time.Second)
-	chatH := &chat.Handlers{Svc: a.Chat, SendLimit: sendLimit, OpenLimit: httpx.NewLimiter(20, 24*time.Hour)}
+	chatH := &chat.Handlers{Svc: a.Chat, SendLimit: sendLimit, OpenLimit: httpx.NewLimiter(20, 24*time.Hour), LookupLimit: lookupLimit}
 	a.Hub = realtime.NewHub(realtime.Options{
 		Chat: a.Chat, Auth: a.Auth, Pool: d.Pool, Logger: d.Logger, SendLimit: sendLimit, HelloTimeout: d.HelloTimeout,
 	})
 	a.Chat.SetNotifier(a.Hub)
 	a.Auth.OnRevoke = a.Hub.CloseSession
+	bg, stop := context.WithCancel(context.Background())
+	a.stop = stop
+	go a.Hub.ListenRevocations(bg)
+	go a.pruneLoop(bg)
 	req := a.Auth.Require
 
 	mux := http.NewServeMux()
@@ -114,7 +120,10 @@ func New(d Deps) *App {
 func (a *App) Handler() http.Handler { return a.handler }
 
 // Close releases background resources (realtime hub, sweepers). The pool is owned by the caller.
-func (a *App) Close() { a.Hub.Close() }
+func (a *App) Close() {
+	a.stop()
+	a.Hub.Close()
+}
 
 func securityHeaders(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -147,4 +156,22 @@ func (a *App) ready(w http.ResponseWriter, r *http.Request) {
 	f.Close()
 	os.Remove(f.Name())
 	httpx.WriteJSON(w, http.StatusOK, map[string]any{"status": "ok", "migration": v})
+}
+
+// pruneLoop trims the replay log hourly.
+func (a *App) pruneLoop(ctx context.Context) {
+	t := time.NewTicker(time.Hour)
+	defer t.Stop()
+	for {
+		if n, err := a.Chat.PruneEvents(ctx); err != nil && ctx.Err() == nil {
+			a.deps.Logger.Error("prune events", "err", err)
+		} else if n > 0 {
+			a.deps.Logger.Info("pruned events", "rows", n)
+		}
+		select {
+		case <-ctx.Done():
+			return
+		case <-t.C:
+		}
+	}
 }

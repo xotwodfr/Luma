@@ -60,6 +60,7 @@ type wsClient struct {
 }
 
 type dialOpts struct {
+	fresh      bool // hello with cursor null
 	headerAuth bool
 	noHello    bool
 }
@@ -100,6 +101,9 @@ func dialWS(t *testing.T, url, token string, cursor int64, o dialOpts) *wsClient
 		return w
 	}
 	hello := map[string]any{"cursor": cursor}
+	if o.fresh {
+		hello["cursor"] = nil
+	}
 	if !o.headerAuth {
 		hello["token"] = token
 	}
@@ -485,5 +489,39 @@ func TestRealtime_StaleCursorResync(t *testing.T) {
 	}
 	if wb.cursor != 3 {
 		t.Fatalf("after resync the cursor is the current one: %d", wb.cursor)
+	}
+}
+
+// Review finding #2: the admin CLI is a separate process; its revocations must still close
+// sockets held by the running server (via Postgres NOTIFY).
+func TestRealtime_RevokeFromOtherProcessClosesSocket(t *testing.T) {
+	h := newHarness(t)
+	a := h.register("alice")
+	ws := dialWS(t, h.wsURL(), a.Token, 0, dialOpts{})
+	cli := api.New(api.Deps{Pool: h.pool, Config: config.Config{Registration: "invite", UploadDir: t.TempDir()}, Logger: slog.New(slog.NewTextHandler(io.Discard, nil))})
+	defer cli.Close()
+	start := time.Now()
+	if err := cli.Auth.DisableUser(context.Background(), "alice"); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case <-ws.closed:
+		t.Logf("closed after %v", time.Since(start))
+	case <-time.After(time.Second):
+		t.Fatal("socket of a user disabled from another process still open after 1s")
+	}
+}
+
+// Review finding #5: a fresh install must not replay the whole account history.
+func TestRealtime_FreshClientGetsResyncNotReplay(t *testing.T) {
+	h := newHarness(t)
+	a, b := h.register("alice"), h.register("bob")
+	conv := h.openDM(a, "bob")
+	for i := 0; i < 3; i++ {
+		h.restSend(a, conv, "history")
+	}
+	wb := dialWS(t, h.wsURL(), b.Token, 0, dialOpts{fresh: true})
+	if len(wb.replayed) != 1 || wb.replayed[0].T != "resync_required" || wb.cursor != 4 {
+		t.Fatalf("fresh client: replayed=%d cursor=%d", len(wb.replayed), wb.cursor)
 	}
 }

@@ -61,7 +61,7 @@ func (w *world) block(blocker, blocked uuid.UUID) {
 
 func (w *world) dm(a uuid.UUID, b string) uuid.UUID {
 	w.t.Helper()
-	c, err := w.svc.OpenDirect(w.ctx, a, b)
+	c, err := w.svc.OpenDirect(w.ctx, a, b, nil)
 	if err != nil {
 		w.t.Fatal(err)
 	}
@@ -271,7 +271,7 @@ func TestOpenDirect_Idempotent(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			c, err := w.svc.OpenDirect(w.ctx, alice, "carol")
+			c, err := w.svc.OpenDirect(w.ctx, alice, "carol", nil)
 			if err != nil {
 				t.Error(err)
 			}
@@ -286,7 +286,7 @@ func TestOpenDirect_Idempotent(t *testing.T) {
 			t.Fatal("concurrent opens created two conversations")
 		}
 	}
-	if _, err := w.svc.OpenDirect(w.ctx, alice, "alice"); code(err) != "invalid_request" {
+	if _, err := w.svc.OpenDirect(w.ctx, alice, "alice", nil); code(err) != "invalid_request" {
 		t.Fatalf("self DM: %v", err)
 	}
 }
@@ -296,12 +296,12 @@ func TestOpenDirect_BlockedLooksMissing(t *testing.T) {
 	alice := w.user("alice")
 	bob := w.user("bob")
 	w.block(bob, alice)
-	_, errBlocked := w.svc.OpenDirect(w.ctx, alice, "bob")
-	_, errMissing := w.svc.OpenDirect(w.ctx, alice, "nobody")
+	_, errBlocked := w.svc.OpenDirect(w.ctx, alice, "bob", nil)
+	_, errMissing := w.svc.OpenDirect(w.ctx, alice, "nobody", nil)
 	if code(errBlocked) != "not_found" || code(errMissing) != "not_found" {
 		t.Fatalf("blocked=%v missing=%v", errBlocked, errMissing)
 	}
-	if _, err := w.svc.OpenDirect(w.ctx, bob, "alice"); code(err) != "not_found" {
+	if _, err := w.svc.OpenDirect(w.ctx, bob, "alice", nil); code(err) != "not_found" {
 		t.Fatalf("blocker opening DM with the blocked: %v", err)
 	}
 }
@@ -318,6 +318,8 @@ func TestSend_Validation(t *testing.T) {
 		{ConversationID: conv, ClientID: uuid.New(), Kind: "system", Body: "hi"},
 		{ConversationID: conv, ClientID: uuid.Nil, Kind: "text", Body: "hi"},
 		{ConversationID: conv, ClientID: uuid.New(), Kind: "text", Body: "bad \x00 byte"},
+		{ConversationID: conv, ClientID: uuid.New(), Kind: "text", Body: "hi", Meta: []byte(`{"attachments":[{"file_id":"x"}]}`)},
+		{ConversationID: conv, ClientID: uuid.New(), Kind: "text", Body: "hi", Meta: []byte(`[]`)},
 	}
 	for i, in := range cases {
 		if _, _, err := w.svc.Send(w.ctx, alice, in); code(err) != "invalid_message" {
@@ -459,5 +461,59 @@ func TestEvents_Replay(t *testing.T) {
 	w.pool.Exec(w.ctx, `DELETE FROM user_events WHERE user_id = $1 AND seq <= 2`, bob)
 	if oldest, _ := w.svc.OldestCursor(w.ctx, bob); oldest != 2 {
 		t.Fatalf("after pruning, oldest cursor = %d, want 2", oldest)
+	}
+}
+
+// Regression: FK KEY SHARE locks taken by INSERT used to deadlock against
+// receipt transactions locking user rows FOR UPDATE (review finding #1).
+func TestSend_NoDeadlockWithReceipts(t *testing.T) {
+	w := newWorld(t)
+	alice, bob := w.user("alice"), w.user("bob")
+	conv := w.dm(alice, "bob")
+	var wg sync.WaitGroup
+	errs := make(chan error, 1000)
+	for _, pair := range [][2]uuid.UUID{{alice, bob}, {bob, alice}} {
+		sender, reader := pair[0], pair[1]
+		wg.Add(2)
+		go func() {
+			defer wg.Done()
+			for i := 0; i < 100; i++ {
+				_, _, err := w.svc.Send(w.ctx, sender, chat.SendInput{ConversationID: conv, ClientID: uuid.New(), Kind: "text", Body: "x"})
+				errs <- err
+			}
+		}()
+		go func() {
+			defer wg.Done()
+			for i := int64(1); i <= 100; i++ {
+				_, err := w.svc.MarkDelivered(w.ctx, reader, conv, i)
+				errs <- err
+				_, err = w.svc.MarkRead(w.ctx, reader, conv, i)
+				errs <- err
+			}
+		}()
+	}
+	wg.Wait()
+	close(errs)
+	for err := range errs {
+		if err != nil {
+			t.Fatalf("concurrent send/receipt failed: %v", err)
+		}
+	}
+}
+
+func TestPruneEvents(t *testing.T) {
+	w := newWorld(t)
+	alice := w.user("alice")
+	bob := w.user("bob")
+	conv := w.dm(alice, "bob")
+	w.send(alice, conv, "old")
+	w.send(alice, conv, "new")
+	w.pool.Exec(w.ctx, `UPDATE user_events SET created_at = now() - interval '31 days' WHERE seq <= 2`)
+	n, err := w.svc.PruneEvents(w.ctx)
+	if err != nil || n != 4 { // seqs 1-2 for both users
+		t.Fatalf("pruned %d (%v)", n, err)
+	}
+	if c, _ := w.svc.OldestCursor(w.ctx, bob); c != 2 {
+		t.Fatalf("oldest cursor after prune = %d", c)
 	}
 }

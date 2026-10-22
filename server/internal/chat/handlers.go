@@ -10,11 +10,13 @@ import (
 	"luma.folk3s.com/server/internal/httpx"
 )
 
-// Handlers exposes conversations over REST. SendLimit and OpenLimit are per-user buckets.
+// Handlers exposes conversations over REST. SendLimit, OpenLimit (new DMs only) and LookupLimit are per-user buckets.
 type Handlers struct {
 	Svc       *Service
 	SendLimit *httpx.Limiter
 	OpenLimit *httpx.Limiter
+	// LookupLimit throttles username probing (shared with GET /v1/users/{username}).
+	LookupLimit *httpx.Limiter
 }
 
 func convID(w http.ResponseWriter, r *http.Request) (uuid.UUID, bool) {
@@ -40,10 +42,16 @@ func (h *Handlers) Create(w http.ResponseWriter, r *http.Request) {
 		httpx.Fail(w, r, httpx.E(http.StatusBadRequest, "invalid_request", `Only kind "direct" is supported.`))
 		return
 	}
-	if !h.OpenLimit.Limit(w, me.String()) {
+	if !h.LookupLimit.Limit(w, me.String()) {
 		return
 	}
-	c, err := h.Svc.OpenDirect(r.Context(), me, in.Username)
+	c, err := h.Svc.OpenDirect(r.Context(), me, in.Username, func() error {
+		if ok, wait := h.OpenLimit.Allow(me.String()); !ok {
+			w.Header().Set("Retry-After", strconv.Itoa(int(wait.Seconds())+1))
+			return httpx.E(http.StatusTooManyRequests, "rate_limited", "You've started a lot of new conversations today. Try again later.")
+		}
+		return nil
+	})
 	if err != nil {
 		httpx.Fail(w, r, err)
 		return

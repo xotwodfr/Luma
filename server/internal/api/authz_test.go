@@ -114,11 +114,42 @@ func TestSend_RateLimited(t *testing.T) {
 	a := h.register("alice")
 	h.register("bob")
 	conv := h.do("POST", "/v1/conversations", a.Token, map[string]any{"kind": "direct", "username": "bob"}).Body["id"].(string)
-	var last resp
-	for i := 0; i < 31; i++ {
-		last = h.do("POST", "/v1/conversations/"+conv+"/messages", a.Token, map[string]any{"client_id": uuid.NewString(), "kind": "text", "body": "x"})
+	// The bucket refills continuously (one token per 333 ms), so assert the property, not exact timing.
+	limited := 0
+	for i := 0; i < 45; i++ {
+		r := h.do("POST", "/v1/conversations/"+conv+"/messages", a.Token, map[string]any{"client_id": uuid.NewString(), "kind": "text", "body": "x"})
+		if r.Status == 429 {
+			if r.Header.Get("Retry-After") == "" {
+				t.Fatal("429 without Retry-After")
+			}
+			limited++
+		}
 	}
-	if last.Status != 429 || last.Header.Get("Retry-After") == "" {
-		t.Fatalf("31st message in 10s: %d", last.Status)
+	if limited == 0 {
+		t.Fatal("45 rapid sends were never rate limited")
+	}
+}
+
+// Review finding #4: only genuinely new DMs count against the 20/day bucket.
+func TestOpenDirect_LimitOnlyCountsNew(t *testing.T) {
+	h := newHarness(t) // the 20/day DM limit is always the production value
+	a := h.register("alice")
+	h.register("bob")
+	for i := 0; i < 25; i++ {
+		if r := h.do("POST", "/v1/conversations", a.Token, map[string]any{"kind": "direct", "username": "bob"}); r.Status != 200 {
+			t.Fatalf("re-opening an existing DM #%d: %d", i, r.Status)
+		}
+	}
+	for i := 0; i < 20; i++ {
+		h.register(fmt.Sprintf("friend_%d", i))
+	}
+	for i := 0; i < 19; i++ { // bob was the first new DM
+		if r := h.do("POST", "/v1/conversations", a.Token, map[string]any{"kind": "direct", "username": fmt.Sprintf("friend_%d", i)}); r.Status != 200 {
+			t.Fatalf("new DM %d: %d %s", i, r.Status, r.Raw)
+		}
+	}
+	r := h.do("POST", "/v1/conversations", a.Token, map[string]any{"kind": "direct", "username": "friend_19"})
+	if r.Status != 429 || r.Header.Get("Retry-After") == "" {
+		t.Fatalf("21st new DM in a day: %d", r.Status)
 	}
 }

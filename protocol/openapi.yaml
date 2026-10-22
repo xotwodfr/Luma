@@ -4,7 +4,7 @@ info:
   version: 0.1.0
   description: |
     REST API of the Luma messaging server. Real-time delivery uses the WebSocket protocol in
-    `realtime.md`. All bodies are JSON (max 64 KiB, unknown fields rejected). Errors always have the
+    `realtime.md`. All bodies are JSON (max 128 KiB, unknown fields rejected). Errors always have the
     shape `{"error": {"code": "snake_case", "message": "…"}}`; clients branch on `code`, never on `message`.
 
     Security: TLS in transit (Cloudflare → tunnel → Caddy → server on loopback). Luma v1 is NOT
@@ -103,8 +103,9 @@ paths:
   /v1/users/{username}/block:
     post:
       summary: Block a person (idempotent). Blocks DMs, group adds, typing and presence both ways.
+      description: Always 204 (except self-block), including for unknown usernames and for people who blocked you, so it reveals nothing.
       parameters: [{ $ref: "#/components/parameters/username" }]
-      responses: { "204": { description: Blocked }, "404": { $ref: "#/components/responses/NotFound" } }
+      responses: { "204": { description: Blocked }, "400": { $ref: "#/components/responses/Error", description: "invalid_request (self)" } }
     delete:
       summary: Unblock
       parameters: [{ $ref: "#/components/parameters/username" }]
@@ -116,7 +117,7 @@ paths:
       responses: { "200": { description: OK, content: { application/json: { schema: { type: object, properties: { conversations: { type: array, items: { $ref: "#/components/schemas/Conversation" } } } } } } } }
     post:
       summary: Open (or return the existing) direct conversation with a username
-      description: Rate limited to 20 new conversations per day per user. Blocked-either-way returns 404.
+      description: Opening an existing DM is free; creating one counts against 20 new conversations per day per user. Blocked-either-way returns 404. Shares a 60/minute lookup bucket with GET /v1/users/{username}.
       requestBody: { required: true, content: { application/json: { schema: { type: object, required: [kind, username], properties: { kind: { const: direct }, username: { type: string } } } } } }
       responses: { "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Conversation" } } } }, "404": { $ref: "#/components/responses/NotFound" }, "429": { $ref: "#/components/responses/RateLimited" } }
   /v1/conversations/{id}:

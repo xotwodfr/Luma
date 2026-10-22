@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"sort"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -34,7 +35,7 @@ func appendEvents(ctx context.Context, tx pgx.Tx, pending []pendingEvent) ([]Eve
 		ids = append(ids, id)
 	}
 	sort.Slice(ids, func(i, j int) bool { return ids[i].String() < ids[j].String() })
-	if _, err := tx.Exec(ctx, `SELECT 1 FROM users WHERE id = ANY($1) ORDER BY id FOR UPDATE`, ids); err != nil {
+	if _, err := tx.Exec(ctx, `SELECT 1 FROM users WHERE id = ANY($1) ORDER BY id FOR NO KEY UPDATE`, ids); err != nil {
 		return nil, err
 	}
 	next := map[uuid.UUID]int64{}
@@ -88,6 +89,15 @@ func (s *Service) OldestCursor(ctx context.Context, user uuid.UUID) (int64, erro
 	return c, err
 }
 
+// EventRetention is how long user_events are kept for reconnect replay.
+const EventRetention = 30 * 24 * time.Hour
+
+// PruneEvents deletes replay events older than EventRetention; returns rows removed.
+func (s *Service) PruneEvents(ctx context.Context) (int64, error) {
+	tag, err := s.pool.Exec(ctx, `DELETE FROM user_events WHERE created_at < $1`, time.Now().Add(-EventRetention))
+	return tag.RowsAffected(), err
+}
+
 // CurrentCursor is the user's latest event seq.
 func (s *Service) CurrentCursor(ctx context.Context, user uuid.UUID) (int64, error) {
 	var c int64
@@ -118,14 +128,16 @@ func (s *Service) advance(ctx context.Context, me, conv uuid.UUID, seq int64, re
 	}
 	pending := []pendingEvent{}
 	// Lock users before the members row (global lock order); appendEvents re-locks harmlessly.
-	if _, err := tx.Exec(ctx, `SELECT 1 FROM users WHERE id = ANY($1) ORDER BY id FOR UPDATE`, members); err != nil {
+	// NO KEY UPDATE, never FOR UPDATE: FK checks on INSERT take KEY SHARE on users rows, which
+	// FOR UPDATE would conflict with (proven deadlock against concurrent sends).
+	if _, err := tx.Exec(ctx, `SELECT 1 FROM users WHERE id = ANY($1) ORDER BY id FOR NO KEY UPDATE`, members); err != nil {
 		return 0, err
 	}
 	var oldRead, oldDelivered, newRead, newDelivered int64
 	err = tx.QueryRow(ctx, `WITH cur AS (
 			SELECT m.last_read_seq, m.last_delivered_seq, LEAST($3, coalesce(m.left_seq, c.last_seq)) AS target
 			FROM members m JOIN conversations c ON c.id = m.conversation_id
-			WHERE m.conversation_id = $1 AND m.user_id = $2 FOR UPDATE OF m)
+			WHERE m.conversation_id = $1 AND m.user_id = $2 FOR NO KEY UPDATE OF m)
 		UPDATE members m SET
 			last_read_seq = CASE WHEN $4 THEN GREATEST(cur.last_read_seq, cur.target) ELSE cur.last_read_seq END,
 			last_delivered_seq = GREATEST(cur.last_delivered_seq, cur.target)

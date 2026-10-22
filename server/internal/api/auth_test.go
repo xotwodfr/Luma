@@ -4,9 +4,12 @@ import (
 	"context"
 	"net/http"
 	"net/url"
+	"sort"
 	"strings"
 	"testing"
 	"time"
+
+	"luma.folk3s.com/server/internal/auth"
 )
 
 func TestRegister_RequiresValidUnusedInvite(t *testing.T) {
@@ -65,26 +68,30 @@ func TestRegister_PasswordRules(t *testing.T) {
 }
 
 func TestLogin_EnumerationSafe(t *testing.T) {
+	// Use a realistic Argon2 cost so hashing dominates (as in production) rather than HTTP/DB noise.
+	auth.UseParamsForTesting(auth.Params{Memory: 16 * 1024, Time: 2, Threads: 1})
+	t.Cleanup(func() { auth.UseParamsForTesting(auth.Params{Memory: 1024, Time: 1, Threads: 1}) })
 	h := newHarness(t)
 	h.register("alice")
-	var unknown, wrong time.Duration
-	for i := 0; i < 5; i++ {
+	median := func(d []time.Duration) time.Duration {
+		sort.Slice(d, func(i, j int) bool { return d[i] < d[j] })
+		return d[len(d)/2]
+	}
+	var unknown, wrong []time.Duration
+	for i := 0; i < 7; i++ {
 		start := time.Now()
 		a := h.login("nobody_here", "whatever-password")
-		unknown += time.Since(start)
+		unknown = append(unknown, time.Since(start))
 		start = time.Now()
 		b := h.login("alice", "wrong-password")
-		wrong += time.Since(start)
-		if a.Status != b.Status || a.errCode() != b.errCode() || a.errCode() != "invalid_credentials" {
-			t.Fatalf("responses differ: unknown=%d/%s wrong=%d/%s", a.Status, a.errCode(), b.Status, b.errCode())
-		}
-		if string(a.Raw) != string(b.Raw) {
-			t.Fatalf("bodies differ:\n%s\n%s", a.Raw, b.Raw)
+		wrong = append(wrong, time.Since(start))
+		if a.Status != b.Status || a.errCode() != "invalid_credentials" || string(a.Raw) != string(b.Raw) {
+			t.Fatalf("responses differ:\n%d %s\n%d %s", a.Status, a.Raw, b.Status, b.Raw)
 		}
 	}
-	ratio := float64(unknown) / float64(wrong)
+	ratio := float64(median(unknown)) / float64(median(wrong))
 	if ratio < 0.7 || ratio > 1.3 {
-		t.Fatalf("timing ratio unknown/wrong = %.2f, want within 30%%", ratio)
+		t.Fatalf("median timing ratio unknown/wrong = %.2f, want within 30%%", ratio)
 	}
 	if r := h.login("ALICE", "password-alice"); r.Status != 200 {
 		t.Fatalf("login with different case: %d", r.Status)
@@ -248,7 +255,7 @@ func TestInvites_UserQuota(t *testing.T) {
 
 func TestBodyLimits(t *testing.T) {
 	h := newHarness(t)
-	big := strings.Repeat("x", 70*1024)
+	big := strings.Repeat("x", 140*1024)
 	r := h.do("POST", "/v1/auth/login", "", map[string]any{"username": "alice", "password": big})
 	if r.Status != 413 && r.Status != 400 {
 		t.Fatalf("oversized body: %d", r.Status)

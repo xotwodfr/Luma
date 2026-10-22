@@ -209,3 +209,37 @@ func (h *Hub) me(ctx context.Context, id uuid.UUID) (readyUser, error) {
 	err := h.o.Pool.QueryRow(ctx, `SELECT username, display_name FROM users WHERE id = $1`, id).Scan(&u.Username, &u.DisplayName)
 	return u, err
 }
+
+// ListenRevocations closes sockets for sessions revoked by any process (auth.RevokeChannel).
+// It reconnects after errors and returns when ctx is cancelled.
+func (h *Hub) ListenRevocations(ctx context.Context) {
+	for ctx.Err() == nil {
+		if err := h.listenOnce(ctx); err != nil && ctx.Err() == nil {
+			h.o.Logger.Error("revocation listener", "err", err)
+			select {
+			case <-ctx.Done():
+			case <-time.After(time.Second):
+			}
+		}
+	}
+}
+
+func (h *Hub) listenOnce(ctx context.Context) error {
+	conn, err := h.o.Pool.Acquire(ctx)
+	if err != nil {
+		return err
+	}
+	defer conn.Release()
+	if _, err := conn.Exec(ctx, "LISTEN "+auth.RevokeChannel); err != nil {
+		return err
+	}
+	for {
+		n, err := conn.Conn().WaitForNotification(ctx)
+		if err != nil {
+			return err
+		}
+		if id, err := uuid.Parse(n.Payload); err == nil {
+			h.CloseSession(id)
+		}
+	}
+}

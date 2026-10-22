@@ -111,7 +111,9 @@ func isUniqueViolation(err error) bool {
 
 // OpenDirect returns the 1:1 conversation between me and username, creating it if needed.
 // A missing, disabled or blocked-either-way user is reported as not found.
-func (s *Service) OpenDirect(ctx context.Context, me uuid.UUID, username string) (Conversation, error) {
+//
+// allowNew is consulted only when a new conversation would be created (nil allows); its error is returned.
+func (s *Service) OpenDirect(ctx context.Context, me uuid.UUID, username string, allowNew func() error) (Conversation, error) {
 	var other uuid.UUID
 	err := s.pool.QueryRow(ctx, `SELECT u.id FROM users u WHERE u.username = $1 AND u.disabled_at IS NULL
 		AND NOT `+users.BlockedEitherWay("u.id", "$2"), auth.NormalizeUsername(username), me).Scan(&other)
@@ -140,6 +142,11 @@ func (s *Service) OpenDirect(ctx context.Context, me uuid.UUID, username string)
 		return s.Get(ctx, me, id)
 	} else if !errors.Is(err, pgx.ErrNoRows) {
 		return Conversation{}, err
+	}
+	if allowNew != nil {
+		if err := allowNew(); err != nil {
+			return Conversation{}, err
+		}
 	}
 	if err := tx.QueryRow(ctx, `INSERT INTO conversations (kind, created_by) VALUES ('direct', $1) RETURNING id`, me).Scan(&id); err != nil {
 		return Conversation{}, err
