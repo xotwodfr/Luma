@@ -302,7 +302,7 @@ func TestHealth(t *testing.T) {
 }
 
 // Per-account login throttle: strict from addresses new to the account (unknown usernames alike),
-// larger but finite from known addresses, so strangers can't lock the owner out and a forged
+// larger but finite per known address, so strangers can't lock the owner out and a forged
 // known IP can't guess without limit (review findings).
 func TestLogin_PerAccountLimit(t *testing.T) {
 	h := newHarness(t, func(d *api.Deps) { // per-IP limit relaxed; forwarded IPs trusted from loopback
@@ -312,6 +312,9 @@ func TestLogin_PerAccountLimit(t *testing.T) {
 		"password": "password-alice", "device_name": "d", "platform": "linux"}, "CF-Connecting-IP", "198.51.100.1")
 	login := func(name, pw, ip string) int {
 		return h.do("POST", "/v1/auth/login", "", map[string]any{"username": name, "password": pw}, "CF-Connecting-IP", ip).Status
+	}
+	if st := login("alice", "password-alice", "198.51.100.2"); st != 200 { // a second known address (uses 1 strict token)
+		t.Fatalf("login from a second address: %d", st)
 	}
 	for _, name := range []string{"alice", "nobody_here"} {
 		limited := -1
@@ -324,8 +327,8 @@ func TestLogin_PerAccountLimit(t *testing.T) {
 				t.Fatalf("%s attempt %d: %d", name, i, st)
 			}
 		}
-		if limited != 30 {
-			t.Fatalf("%s: throttled at attempt %d, want 30", name, limited)
+		if want := map[string]int{"alice": 29, "nobody_here": 30}[name]; limited != want {
+			t.Fatalf("%s: throttled at attempt %d, want %d", name, limited, want)
 		}
 	}
 	if st := login("ALICE", "password-alice", "203.0.113.200"); st != 429 {
@@ -344,5 +347,8 @@ func TestLogin_PerAccountLimit(t *testing.T) {
 	}
 	if limited != 99 {
 		t.Fatalf("known-address bucket throttled at attempt %d, want 99", limited)
+	}
+	if st := login("alice", "password-alice", "198.51.100.2"); st != 200 {
+		t.Fatalf("draining one known address locked out another: %d", st)
 	}
 }
