@@ -29,9 +29,9 @@ public:
     void login(const QString &username, const QString &password, Callback cb);
     void registerAccount(const QString &invite, const QString &username, const QString &displayName, const QString &password, Callback cb);
     void logout(Callback cb);
-    void me(Callback cb);
-    void conversations(Callback cb);
-    void conversation(const QString &id, Callback cb);
+    virtual void me(Callback cb);
+    virtual void conversations(Callback cb);
+    virtual void conversation(const QString &id, Callback cb);
     void openDirect(const QString &username, Callback cb);
     void history(const QString &conversationId, qint64 beforeSeq, int limit, Callback cb);
 

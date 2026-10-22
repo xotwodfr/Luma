@@ -81,6 +81,9 @@ Close codes: `4001` unauthorized or no hello in time · `4002` first frame was n
 - Persist the cursor only after the event has been applied to local storage.
 - Reconnect with exponential backoff from 0.5 s, doubling to a 30 s cap, with full jitter. Reconnect
   immediately when the OS reports that the network came back.
+- After a failed connect or reconnect, call `GET /v1/me` (at most every 30 s). A revoked token makes
+  the handshake fail with HTTP 401, which WebSocket APIs don't report distinctly; a 401 from REST
+  means sign out and stop reconnecting.
 - Send `ping` every 25 s when idle. Cloudflare closes idle sockets at 100 s, and the server closes
   sockets that don't answer its pings within about 60 s.
 

@@ -16,6 +16,7 @@ public:
     void upsertConversation(const Conversation &c);
     std::optional<Conversation> conversation(const QString &id) const;
     QList<Conversation> conversations() const;
+    void removeConversation(const QString &id);
 
     void upsertMessage(const Message &m);
     QList<Message> messages(const QString &conversationId, int limit) const;

@@ -69,6 +69,12 @@ QList<Conversation> Store::conversations() const
     return out;
 }
 
+void Store::removeConversation(const QString &id)
+{
+    run(db(), QStringLiteral("DELETE FROM messages WHERE conversation_id = ?"), {id});
+    run(db(), QStringLiteral("DELETE FROM conversations WHERE id = ?"), {id});
+}
+
 void Store::upsertMessage(const Message &m)
 {
     run(db(), QStringLiteral("INSERT INTO messages (conversation_id, seq, json) VALUES (?, ?, ?) "

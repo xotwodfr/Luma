@@ -409,9 +409,13 @@ func TestRealtime_RevokeClosesSocket(t *testing.T) {
 		t.Fatalf("revoke: %d", r.Status)
 	}
 	select {
-	case <-ws.closed:
+	case err := <-ws.closed:
 		if time.Since(start) > time.Second {
 			t.Fatalf("socket closed after %v", time.Since(start))
+		}
+		// Clients rely on 4003 to sign out instead of reconnecting (protocol/realtime.md).
+		if code := websocket.CloseStatus(err); code != 4003 {
+			t.Fatalf("revoked socket closed with %v, want 4003", code)
 		}
 	case <-time.After(time.Second):
 		t.Fatal("revoked session's socket still open after 1s")

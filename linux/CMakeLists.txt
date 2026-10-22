@@ -19,6 +19,9 @@ target_sources(luma_core PRIVATE
     src/core/Store.cpp src/core/Store.h
     src/core/Backoff.h
     src/core/ApiClient.cpp src/core/ApiClient.h
+    src/core/Transport.h
+    src/core/RealtimeClient.cpp src/core/RealtimeClient.h
+    src/core/Sync.cpp src/core/Sync.h
 )
 target_include_directories(luma_core PUBLIC src src/core)
 target_link_libraries(luma_core PUBLIC Qt6::Core Qt6::Gui Qt6::Quick Qt6::Network Qt6::WebSockets Qt6::Sql Qt6::Svg)
@@ -59,3 +62,5 @@ endfunction()
 luma_test(tst_icons)
 luma_test(tst_store)
 luma_test(tst_backoff)
+luma_test(tst_sync)
+luma_test(tst_e2e)

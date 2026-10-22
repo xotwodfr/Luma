@@ -68,10 +68,15 @@ func (c *conn) push(it outItem) {
 	}
 }
 
+// close sends the close frame first and only then cancels: cancelling a pending Read in
+// coder/websocket tears the connection down at once, and the client would never see the code
+// (4003 tells it to sign out instead of reconnecting).
 func (c *conn) close(code websocket.StatusCode, reason string) {
 	c.closeOnce.Do(func() {
-		c.cancel()
-		go c.ws.Close(code, reason)
+		go func() {
+			c.ws.Close(code, reason)
+			c.cancel()
+		}()
 	})
 }
 
