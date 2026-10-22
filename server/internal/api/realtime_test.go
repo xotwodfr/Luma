@@ -529,3 +529,31 @@ func TestRealtime_FreshClientGetsResyncNotReplay(t *testing.T) {
 		t.Fatalf("fresh client: replayed=%d cursor=%d", len(wb.replayed), wb.cursor)
 	}
 }
+
+// Security review: once a session is revoked, its socket must not get any further sends
+// accepted while the close handshake is still in flight.
+func TestRealtime_NoSendsAcceptedAfterRevoke(t *testing.T) {
+	h := newHarness(t)
+	a := h.register("alice")
+	h.register("bob")
+	conv := h.openDM(a, "bob")
+	ws := dialWS(t, h.wsURL(), a.Token, 0, dialOpts{})
+	other := h.login("alice", "password-alice").Body["token"].(string)
+	if r := h.do("POST", "/v1/auth/sessions/revoke-others", other, nil); r.Status != 204 {
+		t.Fatalf("revoke: %d", r.Status)
+	}
+	var before int
+	h.pool.QueryRow(context.Background(), `SELECT count(*) FROM messages`).Scan(&before)
+	for i := 0; i < 20; i++ {
+		b, _ := json.Marshal(map[string]any{"t": "send", "id": fmt.Sprint(i), "d": map[string]any{"conversation_id": conv, "client_id": uuid.NewString(), "kind": "text", "body": "after revoke"}})
+		if ws.c.Write(context.Background(), websocket.MessageText, b) != nil {
+			break
+		}
+	}
+	time.Sleep(300 * time.Millisecond)
+	var after int
+	h.pool.QueryRow(context.Background(), `SELECT count(*) FROM messages`).Scan(&after)
+	if after != before {
+		t.Fatalf("%d messages accepted from a revoked session", after-before)
+	}
+}

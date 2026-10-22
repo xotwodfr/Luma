@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/coder/websocket"
@@ -54,8 +55,11 @@ type conn struct {
 	ws        *websocket.Conn
 	p         auth.Principal
 	out       chan outItem
-	ctx       context.Context
+	ctx       context.Context // socket lifetime: outlives a close decision long enough to deliver the close frame
 	cancel    context.CancelFunc
+	ops       context.Context // application work (sends, receipts, event delivery): stops the instant a close is decided
+	stopOps   context.CancelFunc
+	closing   atomic.Bool
 	closeOnce sync.Once
 	lastSent  int64 // writer goroutine only
 }
@@ -73,6 +77,8 @@ func (c *conn) push(it outItem) {
 // (4003 tells it to sign out instead of reconnecting).
 func (c *conn) close(code websocket.StatusCode, reason string) {
 	c.closeOnce.Do(func() {
+		c.closing.Store(true) // no further frames are handled or events delivered (e.g. after revocation)
+		c.stopOps()
 		go func() {
 			c.ws.Close(code, reason)
 			c.cancel()
@@ -123,7 +129,8 @@ func (h *Hub) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
-	c := &conn{hub: h, ws: ws, p: p, out: make(chan outItem, outBuffer), ctx: ctx, cancel: cancel}
+	ops, stopOps := context.WithCancel(ctx)
+	c := &conn{hub: h, ws: ws, p: p, out: make(chan outItem, outBuffer), ctx: ctx, cancel: cancel, ops: ops, stopOps: stopOps}
 	first := h.register(c)
 	// Close the window where a revoke lands between Authenticate and register.
 	var live bool
@@ -231,6 +238,9 @@ func (c *conn) writer(cursor *int64) {
 		case <-ctx.Done():
 			return
 		case it := <-c.out:
+			if c.closing.Load() {
+				return
+			}
 			var err error
 			switch {
 			case it.ev == nil:
@@ -279,7 +289,7 @@ func (c *conn) failErr(id string, err error) {
 		c.fail(id, e.Code, e.Message)
 		return
 	}
-	if c.ctx.Err() == nil {
+	if c.ops.Err() == nil { // cancelled work after a close decision is expected, not an error
 		c.hub.o.Logger.Error("realtime internal error", "err", err, "user", c.p.UserID)
 	}
 	c.fail(id, httpx.ErrInternal.Code, httpx.ErrInternal.Message)
@@ -291,6 +301,9 @@ func (c *conn) reader() {
 	for {
 		_, data, err := c.ws.Read(c.ctx)
 		if err != nil {
+			return
+		}
+		if c.closing.Load() {
 			return
 		}
 		var in inFrame
@@ -317,7 +330,7 @@ func (c *conn) handle(in inFrame) {
 			c.failErr(in.ID, errBadFrame)
 			return
 		}
-		m, _, err := c.hub.o.Chat.Send(c.ctx, c.p.UserID, s)
+		m, _, err := c.hub.o.Chat.Send(c.ops, c.p.UserID, s)
 		if err != nil {
 			c.failErr(in.ID, err)
 			return
@@ -332,7 +345,7 @@ func (c *conn) handle(in inFrame) {
 		if in.T == "delivered" {
 			mark, key = c.hub.o.Chat.MarkDelivered, "last_delivered_seq"
 		}
-		seq, err := mark(c.ctx, c.p.UserID, target.ConversationID, target.Seq)
+		seq, err := mark(c.ops, c.p.UserID, target.ConversationID, target.Seq)
 		if err != nil {
 			c.failErr(in.ID, err)
 			return
@@ -343,7 +356,7 @@ func (c *conn) handle(in inFrame) {
 			c.failErr(in.ID, errBadFrame)
 			return
 		}
-		if err := c.hub.sendTyping(c.ctx, c.p.UserID, target.ConversationID); err != nil {
+		if err := c.hub.sendTyping(c.ops, c.p.UserID, target.ConversationID); err != nil {
 			c.failErr(in.ID, err)
 		}
 	case "ping":
