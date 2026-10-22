@@ -78,20 +78,20 @@ func (s *Service) Lookup(ctx context.Context, viewer uuid.UUID, username string)
 	return p, err
 }
 
-// Block works even against someone who already blocked the viewer, and is a silent no-op
-// for unknown usernames, so it never reveals whether an account exists.
+// Block works even against someone who already blocked the viewer, and does the same work
+// (one INSERT … SELECT) whether or not the username exists, so neither status nor timing
+// reveals an account.
 func (s *Service) Block(ctx context.Context, viewer uuid.UUID, username string) error {
-	var target uuid.UUID
-	err := s.pool.QueryRow(ctx, `SELECT id FROM users WHERE username = $1`, auth.NormalizeUsername(username)).Scan(&target)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return nil
-	} else if err != nil {
+	name := auth.NormalizeUsername(username)
+	var self string
+	if err := s.pool.QueryRow(ctx, `SELECT username FROM users WHERE id = $1`, viewer).Scan(&self); err != nil {
 		return err
 	}
-	if target == viewer {
+	if name == self {
 		return errSelfBlock
 	}
-	_, err = s.pool.Exec(ctx, `INSERT INTO blocks (blocker_id, blocked_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`, viewer, target)
+	_, err := s.pool.Exec(ctx, `INSERT INTO blocks (blocker_id, blocked_id)
+		SELECT $1, id FROM users WHERE username = $2 AND id <> $1 ON CONFLICT DO NOTHING`, viewer, name)
 	return err
 }
 

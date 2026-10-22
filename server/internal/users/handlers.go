@@ -55,6 +55,9 @@ func (h *Handlers) Lookup(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handlers) Block(w http.ResponseWriter, r *http.Request) {
+	if h.LookupLimit != nil && !h.LookupLimit.Limit(w, auth.MustPrincipal(r).UserID.String()) {
+		return
+	}
 	if err := h.Svc.Block(r.Context(), auth.MustPrincipal(r).UserID, r.PathValue("username")); err != nil {
 		httpx.Fail(w, r, err)
 		return
@@ -63,6 +66,9 @@ func (h *Handlers) Block(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handlers) Unblock(w http.ResponseWriter, r *http.Request) {
+	if h.LookupLimit != nil && !h.LookupLimit.Limit(w, auth.MustPrincipal(r).UserID.String()) {
+		return
+	}
 	if err := h.Svc.Unblock(r.Context(), auth.MustPrincipal(r).UserID, r.PathValue("username")); err != nil {
 		httpx.Fail(w, r, err)
 		return

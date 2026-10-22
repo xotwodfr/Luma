@@ -258,21 +258,29 @@ func (s *Service) Authenticate(ctx context.Context, token string) (Principal, er
 	return p, nil
 }
 
-// revoke marks matching live sessions revoked and notifies OnRevoke after commit.
+// revoke marks matching live sessions revoked and announces them on RevokeChannel in the same
+// transaction (Postgres delivers NOTIFY only on commit), so a revocation is never recorded without
+// being announced. It runs on a context the client can't cancel. OnRevoke fires after commit.
 func (s *Service) revoke(ctx context.Context, where string, args ...any) (int, error) {
-	rows, err := s.pool.Query(ctx, `UPDATE sessions SET revoked_at = now() WHERE revoked_at IS NULL AND `+where+` RETURNING id`, args...)
+	ctx = context.WithoutCancel(ctx)
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return 0, err
+	}
+	defer tx.Rollback(ctx)
+	rows, err := tx.Query(ctx, `UPDATE sessions SET revoked_at = now() WHERE revoked_at IS NULL AND `+where+` RETURNING id`, args...)
 	if err != nil {
 		return 0, err
 	}
 	ids, err := pgx.CollectRows(rows, pgx.RowTo[uuid.UUID])
-	if err != nil {
+	if err != nil || len(ids) == 0 {
 		return 0, err
 	}
-	if len(ids) > 0 {
-		// Other processes (the admin CLI, future server instances) close their sockets via NOTIFY.
-		if _, err := s.pool.Exec(ctx, `SELECT pg_notify('`+RevokeChannel+`', x::text) FROM unnest($1::uuid[]) x`, ids); err != nil {
-			return len(ids), err
-		}
+	if _, err := tx.Exec(ctx, `SELECT pg_notify('`+RevokeChannel+`', x::text) FROM unnest($1::uuid[]) x`, ids); err != nil {
+		return 0, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return 0, err
 	}
 	if s.OnRevoke != nil {
 		for _, id := range ids {
