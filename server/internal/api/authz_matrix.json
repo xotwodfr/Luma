@@ -1,0 +1,57 @@
+{
+  "_comment": "World: alice, bob, carol, mallory. DM {ab} = alice+bob. DM {am} = alice+mallory, then alice blocked mallory. {aliceSession} is one of alice's session ids. Every REST route must appear here.",
+  "rows": [
+    { "method": "GET", "path": "/v1/me", "as": "anon", "expect": 401 },
+    { "method": "GET", "path": "/v1/me", "as": "alice", "expect": 200 },
+    { "method": "PATCH", "path": "/v1/me", "as": "anon", "body": { "display_name": "x" }, "expect": 401 },
+    { "method": "POST", "path": "/v1/me/password", "as": "anon", "body": { "current_password": "x", "new_password": "yyyyyyyyyy" }, "expect": 401 },
+    { "method": "POST", "path": "/v1/me/password", "as": "bob", "body": { "current_password": "wrong-password", "new_password": "yyyyyyyyyy" }, "expect": 401 },
+
+    { "method": "POST", "path": "/v1/auth/logout", "as": "anon", "expect": 401 },
+    { "method": "GET", "path": "/v1/auth/sessions", "as": "anon", "expect": 401 },
+    { "method": "DELETE", "path": "/v1/auth/sessions/{aliceSession}", "as": "bob", "expect": 404 },
+    { "method": "DELETE", "path": "/v1/auth/sessions/{aliceSession}", "as": "anon", "expect": 401 },
+    { "method": "POST", "path": "/v1/auth/sessions/revoke-others", "as": "anon", "expect": 401 },
+    { "method": "POST", "path": "/v1/invites", "as": "anon", "expect": 401 },
+
+    { "method": "GET", "path": "/v1/users/alice", "as": "anon", "expect": 401 },
+    { "method": "GET", "path": "/v1/users/alice", "as": "carol", "expect": 200 },
+    { "method": "GET", "path": "/v1/users/alice", "as": "mallory", "expect": 404 },
+    { "method": "POST", "path": "/v1/users/alice/block", "as": "mallory", "expect": 404 },
+    { "method": "POST", "path": "/v1/users/alice/block", "as": "anon", "expect": 401 },
+    { "method": "DELETE", "path": "/v1/users/alice/block", "as": "anon", "expect": 401 },
+
+    { "method": "GET", "path": "/v1/conversations", "as": "anon", "expect": 401 },
+    { "method": "GET", "path": "/v1/conversations", "as": "carol", "expect": 200 },
+    { "method": "POST", "path": "/v1/conversations", "as": "anon", "body": { "kind": "direct", "username": "alice" }, "expect": 401 },
+    { "method": "POST", "path": "/v1/conversations", "as": "carol", "body": { "kind": "direct", "username": "alice" }, "expect": 200 },
+    { "method": "POST", "path": "/v1/conversations", "as": "mallory", "body": { "kind": "direct", "username": "alice" }, "expect": 404 },
+    { "method": "POST", "path": "/v1/conversations", "as": "alice", "body": { "kind": "direct", "username": "mallory" }, "expect": 404 },
+
+    { "method": "GET", "path": "/v1/conversations/{ab}", "as": "alice", "expect": 200 },
+    { "method": "GET", "path": "/v1/conversations/{ab}", "as": "carol", "expect": 404 },
+    { "method": "GET", "path": "/v1/conversations/{ab}", "as": "anon", "expect": 401 },
+    { "method": "GET", "path": "/v1/conversations/00000000-0000-0000-0000-000000000000", "as": "alice", "expect": 404 },
+    { "method": "GET", "path": "/v1/conversations/not-a-uuid", "as": "alice", "expect": 404 },
+
+    { "method": "GET", "path": "/v1/conversations/{ab}/messages", "as": "bob", "expect": 200 },
+    { "method": "GET", "path": "/v1/conversations/{ab}/messages", "as": "carol", "expect": 404 },
+    { "method": "GET", "path": "/v1/conversations/{ab}/messages", "as": "anon", "expect": 401 },
+    { "method": "GET", "path": "/v1/conversations/{am}/messages", "as": "mallory", "expect": 200 },
+
+    { "method": "POST", "path": "/v1/conversations/{ab}/messages", "as": "alice", "body": { "client_id": "{uuid}", "kind": "text", "body": "hi" }, "expect": 201 },
+    { "method": "POST", "path": "/v1/conversations/{ab}/messages", "as": "carol", "body": { "client_id": "{uuid}", "kind": "text", "body": "hi" }, "expect": 404 },
+    { "method": "POST", "path": "/v1/conversations/{ab}/messages", "as": "anon", "body": { "client_id": "{uuid}", "kind": "text", "body": "hi" }, "expect": 401 },
+    { "method": "POST", "path": "/v1/conversations/{am}/messages", "as": "mallory", "body": { "client_id": "{uuid}", "kind": "text", "body": "hi" }, "expect": 403 },
+    { "method": "POST", "path": "/v1/conversations/{am}/messages", "as": "alice", "body": { "client_id": "{uuid}", "kind": "text", "body": "hi" }, "expect": 403 },
+
+    { "method": "POST", "path": "/v1/conversations/{ab}/read", "as": "bob", "body": { "seq": 1 }, "expect": 200 },
+    { "method": "POST", "path": "/v1/conversations/{ab}/read", "as": "carol", "body": { "seq": 1 }, "expect": 404 },
+    { "method": "POST", "path": "/v1/conversations/{ab}/read", "as": "anon", "body": { "seq": 1 }, "expect": 401 },
+
+    { "method": "GET", "path": "/v1/health/live", "as": "anon", "expect": 200 },
+    { "method": "GET", "path": "/v1/health/ready", "as": "anon", "expect": 200 },
+    { "method": "POST", "path": "/v1/auth/login", "as": "anon", "body": { "username": "alice", "password": "wrong-password" }, "expect": 401 },
+    { "method": "POST", "path": "/v1/auth/register", "as": "anon", "body": { "invite": "AAAA-BBBB-CCCC-DDDD", "username": "zed", "display_name": "Z", "password": "long-enough-pw" }, "expect": 400 }
+  ]
+}

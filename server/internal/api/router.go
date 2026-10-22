@@ -33,7 +33,11 @@ type App struct {
 	Chat    *chat.Service
 	deps    Deps
 	handler http.Handler
+	routes  []string
 }
+
+// Routes lists every registered "METHOD /pattern" (used by the authorization-matrix coverage test).
+func (a *App) Routes() []string { return a.routes }
 
 func New(d Deps) *App {
 	a := &App{
@@ -55,32 +59,36 @@ func New(d Deps) *App {
 	req := a.Auth.Require
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /v1/health/live", func(w http.ResponseWriter, r *http.Request) {
+	handle := func(pattern string, h http.HandlerFunc) {
+		a.routes = append(a.routes, pattern)
+		mux.HandleFunc(pattern, h)
+	}
+	handle("GET /v1/health/live", func(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 	})
-	mux.HandleFunc("GET /v1/health/ready", a.ready)
+	handle("GET /v1/health/ready", a.ready)
 
-	mux.HandleFunc("POST /v1/auth/register", authH.Register)
-	mux.HandleFunc("POST /v1/auth/login", authH.Login)
-	mux.HandleFunc("POST /v1/auth/logout", req(authH.Logout))
-	mux.HandleFunc("GET /v1/auth/sessions", req(authH.Sessions))
-	mux.HandleFunc("DELETE /v1/auth/sessions/{id}", req(authH.RevokeSession))
-	mux.HandleFunc("POST /v1/auth/sessions/revoke-others", req(authH.RevokeOthers))
-	mux.HandleFunc("POST /v1/invites", req(authH.CreateInvite))
+	handle("POST /v1/auth/register", authH.Register)
+	handle("POST /v1/auth/login", authH.Login)
+	handle("POST /v1/auth/logout", req(authH.Logout))
+	handle("GET /v1/auth/sessions", req(authH.Sessions))
+	handle("DELETE /v1/auth/sessions/{id}", req(authH.RevokeSession))
+	handle("POST /v1/auth/sessions/revoke-others", req(authH.RevokeOthers))
+	handle("POST /v1/invites", req(authH.CreateInvite))
 
-	mux.HandleFunc("GET /v1/me", req(usersH.GetMe))
-	mux.HandleFunc("PATCH /v1/me", req(usersH.PatchMe))
-	mux.HandleFunc("POST /v1/me/password", req(authH.ChangePassword))
-	mux.HandleFunc("GET /v1/users/{username}", req(usersH.Lookup))
-	mux.HandleFunc("POST /v1/users/{username}/block", req(usersH.Block))
-	mux.HandleFunc("DELETE /v1/users/{username}/block", req(usersH.Unblock))
+	handle("GET /v1/me", req(usersH.GetMe))
+	handle("PATCH /v1/me", req(usersH.PatchMe))
+	handle("POST /v1/me/password", req(authH.ChangePassword))
+	handle("GET /v1/users/{username}", req(usersH.Lookup))
+	handle("POST /v1/users/{username}/block", req(usersH.Block))
+	handle("DELETE /v1/users/{username}/block", req(usersH.Unblock))
 
-	mux.HandleFunc("POST /v1/conversations", req(chatH.Create))
-	mux.HandleFunc("GET /v1/conversations", req(chatH.List))
-	mux.HandleFunc("GET /v1/conversations/{id}", req(chatH.Get))
-	mux.HandleFunc("GET /v1/conversations/{id}/messages", req(chatH.History))
-	mux.HandleFunc("POST /v1/conversations/{id}/messages", req(chatH.Send))
-	mux.HandleFunc("POST /v1/conversations/{id}/read", req(chatH.Read))
+	handle("POST /v1/conversations", req(chatH.Create))
+	handle("GET /v1/conversations", req(chatH.List))
+	handle("GET /v1/conversations/{id}", req(chatH.Get))
+	handle("GET /v1/conversations/{id}/messages", req(chatH.History))
+	handle("POST /v1/conversations/{id}/messages", req(chatH.Send))
+	handle("POST /v1/conversations/{id}/read", req(chatH.Read))
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		httpx.Fail(w, r, httpx.ErrNotFound)
