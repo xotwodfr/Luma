@@ -29,6 +29,7 @@ Item {
         color: LumaTokens.surfaceSunken
         visible: root.pair.length < 2
         Text {
+            textFormat: Text.PlainText
             anchors.centerIn: parent
             text: root.initials
             color: LumaTokens.textSecondary
@@ -49,6 +50,7 @@ Item {
             border.width: 2
             border.color: LumaTokens.surface
             Text {
+                textFormat: Text.PlainText
                 anchors.centerIn: parent
                 text: root.pair[parent.index]
                 color: LumaTokens.textSecondary

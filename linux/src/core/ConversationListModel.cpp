@@ -50,6 +50,17 @@ void ConversationListModel::refresh()
     for (const auto &c : m_store.conversations())
         if (m_filter.isEmpty() || titleFor(c, m_sync.me()).contains(m_filter.trimmed(), Qt::CaseInsensitive))
             next.append(c);
+    // Same conversations in the same order (typing, presence, unread changes): update rows in
+    // place so the list keeps its scroll position. Anything else is a reset.
+    bool sameOrder = next.size() == m_rows.size();
+    for (qsizetype i = 0; sameOrder && i < next.size(); ++i)
+        sameOrder = next[i].id == m_rows[i].id;
+    if (sameOrder) {
+        m_rows = next;
+        if (!m_rows.isEmpty())
+            emit dataChanged(index(0), index(int(m_rows.size() - 1)));
+        return;
+    }
     beginResetModel();
     m_rows = next;
     endResetModel();

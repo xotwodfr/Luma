@@ -43,6 +43,7 @@ Popup {
     contentItem: Column {
         spacing: 14
         Text {
+            textFormat: Text.PlainText
             text: "New conversation"
             color: LumaTokens.text
             font.family: LumaTokens.displayFont
@@ -51,6 +52,7 @@ Popup {
             font.letterSpacing: LumaTokens.type.title.tracking
         }
         Text {
+            textFormat: Text.PlainText
             text: "Enter their exact username."
             color: LumaTokens.textSecondary
             font.pixelSize: LumaTokens.type.subhead.size
@@ -63,6 +65,7 @@ Popup {
             onAccepted: dialog.submit()
         }
         Text {
+            textFormat: Text.PlainText
             visible: dialog.error !== ""
             text: dialog.error
             color: LumaTokens.danger

@@ -13,6 +13,7 @@ Column {
 
     spacing: 10
     Text {
+        textFormat: Text.PlainText
         text: root.heading
         color: LumaTokens.text
         font.family: LumaTokens.displayFont
@@ -22,6 +23,7 @@ Column {
         anchors.horizontalCenter: root.centered ? parent.horizontalCenter : undefined
     }
     Text {
+        textFormat: Text.PlainText
         text: root.body
         color: LumaTokens.textSecondary
         font.pixelSize: LumaTokens.type.subhead.size

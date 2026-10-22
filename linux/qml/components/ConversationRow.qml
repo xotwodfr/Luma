@@ -70,6 +70,7 @@ ItemDelegate {
             spacing: 6
             anchors { left: avatar.right; leftMargin: 12; right: timeLabel.left; rightMargin: 8; top: parent.top; topMargin: 14 }
             Text {
+                textFormat: Text.PlainText
                 text: row.title
                 width: Math.min(implicitWidth, nameRow.width - (muteIcon.visible ? 20 : 0))
                 elide: Text.ElideRight
@@ -87,6 +88,7 @@ ItemDelegate {
             }
         }
         Text {
+            textFormat: Text.PlainText
             id: timeLabel
             anchors { right: parent.right; rightMargin: 14; top: parent.top; topMargin: 16 }
             text: row.time

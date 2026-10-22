@@ -37,6 +37,8 @@ public:
     QJsonArray listResult;
     QHash<QString, QJsonObject> byId;
     QStringList fetched;
+    bool defer = false;                   // hold callbacks to simulate replies arriving late
+    QList<std::function<void()>> held;
     int meCalls = 0;
     int meStatus = 200;
     void me(Callback cb) override
@@ -50,6 +52,10 @@ public:
     }
     void conversations(Callback cb) override
     {
+        if (defer) {
+            held.append([this, cb] { defer = false; conversations(cb); });
+            return;
+        }
         ApiResult r;
         r.status = 200;
         r.body = QJsonDocument(QJsonObject{{QStringLiteral("conversations"), listResult}});
@@ -58,6 +64,10 @@ public:
     void conversation(const QString &id, Callback cb) override
     {
         fetched.append(id);
+        if (defer) {
+            held.append([this, id, cb] { defer = false; fetched.removeLast(); conversation(id, cb); });
+            return;
+        }
         ApiResult r;
         r.status = byId.contains(id) ? 200 : 404;
         r.body = QJsonDocument(byId.value(id));
@@ -345,6 +355,43 @@ private slots:
         QCOMPARE(spy.size(), 1);
         QCOMPARE(t.state(), Transport::State::Idle); // stopped, no reconnect loop
         Sync::sessionCheckEveryMs = 30000;
+    }
+
+    // A reply that started under one session must not write into the store after sign-out
+    // (the next account would see the previous one's data).
+    void staleRepliesAfterStopAreDropped()
+    {
+        Store store(path());
+        FakeApi api;
+        api.listResult = {convJson(QStringLiteral("old-account"), 1, 0, 1)};
+        api.defer = true;
+        FakeTransport t;
+        Sync sync(store, api, t);
+        store.setCursor(1);
+        sync.start(QStringLiteral("tok"), QStringLiteral("me")); // triggers reloadConversations
+        QCOMPARE(api.held.size(), 1);
+        sync.stop();
+        store.clear();
+        for (const auto &f : api.held)
+            f();
+        QVERIFY(store.conversations().isEmpty());
+    }
+
+    void failedConversationFetchIsRetried()
+    {
+        Store store(path());
+        FakeApi api; // "cx" unknown at first → 404
+        FakeTransport t;
+        Sync::retryFetchMs = 50;
+        Sync sync(store, api, t);
+        sync.start(QStringLiteral("tok"), QStringLiteral("me"));
+        t.deliver(ready(0));
+        t.deliver(evt(1, QStringLiteral("message.created"),
+                      {{QStringLiteral("conversation_id"), QStringLiteral("cx")},
+                       {QStringLiteral("message"), messageJson(QStringLiteral("cx"), 1, QStringLiteral("bob"), QStringLiteral("k"), QStringLiteral("hi"))}}));
+        QVERIFY(!store.conversation(QStringLiteral("cx")).has_value());
+        api.listResult = {convJson(QStringLiteral("cx"), 1, 0, 1)};
+        QTRY_VERIFY(store.conversation(QStringLiteral("cx")).has_value());
     }
 
     void typingExpires()

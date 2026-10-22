@@ -50,6 +50,7 @@ Rectangle {
                 anchors { left: headAvatar.right; leftMargin: 12; right: parent.right; rightMargin: 20; verticalCenter: parent.verticalCenter }
                 spacing: 1
                 Text {
+                    textFormat: Text.PlainText
                     text: view.h.title || ""
                     width: parent.width
                     elide: Text.ElideRight
@@ -58,6 +59,7 @@ Rectangle {
                     font.weight: Font.DemiBold
                 }
                 Text {
+                    textFormat: Text.PlainText
                     visible: text !== ""
                     text: view.h.status || ""
                     color: LumaTokens.textTertiary

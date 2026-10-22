@@ -16,6 +16,7 @@ Rectangle {
         width: parent.width
         height: 56
         Text {
+            textFormat: Text.PlainText
             text: "Chats"
             anchors { left: parent.left; leftMargin: 16; verticalCenter: parent.verticalCenter }
             color: LumaTokens.text
@@ -47,6 +48,7 @@ Rectangle {
         Keys.onEscapePressed: { text = ""; focus = false }
         Keys.onReturnPressed: list.currentIndex >= 0 || list.count > 0 ? (list.itemAtIndex(0) && list.itemAtIndex(0).clicked()) : undefined
         Text {
+            textFormat: Text.PlainText
             anchors { right: parent.right; rightMargin: 10; verticalCenter: parent.verticalCenter }
             visible: !search.activeFocus && search.text === ""
             text: "Ctrl+K"

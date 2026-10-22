@@ -38,6 +38,7 @@ Item {
         spacing: 2
 
         Text {
+            textFormat: Text.PlainText
             visible: root.showDate
             text: root.dateLabel
             anchors.horizontalCenter: parent.horizontalCenter
@@ -48,6 +49,7 @@ Item {
             bottomPadding: 10
         }
         Text {
+            textFormat: Text.PlainText
             visible: root.showSender
             text: root.senderName.split(" ")[0]
             leftPadding: 12
@@ -88,6 +90,7 @@ Item {
                     spacing: 4
                     anchors { right: parent.right; rightMargin: 10; bottom: parent.bottom; bottomMargin: 6 }
                     Text {
+                        textFormat: Text.PlainText
                         text: root.time
                         color: root.metaColor
                         font.pixelSize: 11
@@ -107,6 +110,7 @@ Item {
             }
         }
         Text {
+            textFormat: Text.PlainText
             visible: root.receipt === "failed"
             text: "Couldn’t send. Click to retry."
             color: LumaTokens.danger

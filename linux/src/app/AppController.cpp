@@ -107,7 +107,9 @@ void AppController::restoreSession()
     }
     auto *job = new QKeychain::ReadPasswordJob(kService, this);
     job->setKey(sessionKey());
-    connect(job, &QKeychain::Job::finished, this, [this, job, use] {
+    connect(job, &QKeychain::Job::finished, this, [this, job, use, gen = m_gen] {
+        if (gen != m_gen)
+            return;
         use(job->error() == QKeychain::NoError ? job->binaryData() : QByteArray());
     });
     job->start();
@@ -148,6 +150,7 @@ void AppController::forgetSession()
 
 void AppController::begin(const QJsonObject &auth)
 {
+    ++m_gen;
     const QJsonObject u = auth[u"user"].toObject();
     m_me = {{u"id"_s, u[u"id"].toString()}, {u"username"_s, u[u"username"].toString()},
             {u"displayName"_s, u[u"display_name"].toString()}, {u"initials"_s, fmt::initials(u[u"display_name"].toString())}};
@@ -175,6 +178,7 @@ void AppController::startSession(const QString &token, const QVariantMap &me)
 
 void AppController::endSession(const QString &notice)
 {
+    ++m_gen;
     m_sync->stop();
     m_api->setToken({});
     m_store->clear();
@@ -197,7 +201,9 @@ void AppController::signIn(const QString &username, const QString &password)
         return setError(u"Enter your username and password."_s);
     setError({});
     setPhase(u"signingIn"_s);
-    m_api->login(username.trimmed(), password, [this](const ApiResult &r) {
+    m_api->login(username.trimmed(), password, [this, gen = m_gen](const ApiResult &r) {
+        if (gen != m_gen)
+            return;
         if (!r.ok()) {
             setPhase(u"signedOut"_s);
             return setError(r.errorMessage);
@@ -210,7 +216,9 @@ void AppController::signUp(const QString &invite, const QString &username, const
 {
     setError({});
     setPhase(u"signingIn"_s);
-    m_api->registerAccount(invite.trimmed(), username, displayName.trimmed(), password, [this](const ApiResult &r) {
+    m_api->registerAccount(invite.trimmed(), username, displayName.trimmed(), password, [this, gen = m_gen](const ApiResult &r) {
+        if (gen != m_gen)
+            return;
         if (!r.ok()) {
             setPhase(u"signedOut"_s);
             return setError(r.errorMessage);
@@ -242,7 +250,9 @@ void AppController::startDirect(const QString &username)
     const QString name = username.trimmed().remove(u'@');
     if (name.isEmpty())
         return emit startDirectFinished(false, u"Enter a username."_s);
-    m_api->openDirect(name, [this](const ApiResult &r) {
+    m_api->openDirect(name, [this, gen = m_gen](const ApiResult &r) {
+        if (gen != m_gen)
+            return;
         if (!r.ok()) {
             const QString msg = r.errorCode == u"not_found" ? u"No one with that username."_s : r.errorMessage;
             return emit startDirectFinished(false, msg);

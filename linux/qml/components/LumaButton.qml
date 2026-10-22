@@ -32,6 +32,7 @@ Button {
                 anchors.verticalCenter: parent.verticalCenter
             }
             Text {
+                textFormat: Text.PlainText
                 text: control.text
                 font: control.font
                 color: control.primary ? LumaTokens.textOnPrimary : LumaTokens.text

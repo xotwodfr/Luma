@@ -3,6 +3,7 @@ import Luma
 
 // The words under the luma line: exactly what is happening with the connection.
 Text {
+    textFormat: Text.PlainText
     readonly property string conn: App.connection
     visible: conn !== "online"
     text: conn === "offline" ? "Offline. Messages will send when you’re back."

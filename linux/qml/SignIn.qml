@@ -24,6 +24,7 @@ Rectangle {
             spacing: 12
             LumaGlyph { width: 36; height: 36; anchors.verticalCenter: parent.verticalCenter }
             Text {
+                textFormat: Text.PlainText
                 text: "Luma"
                 color: LumaTokens.text
                 font.family: LumaTokens.displayFont
@@ -34,12 +35,14 @@ Rectangle {
             }
         }
         Text {
+            textFormat: Text.PlainText
             text: page.creating ? "Create your account with an invite code." : "Sign in to continue."
             color: LumaTokens.textSecondary
             font.pixelSize: LumaTokens.type.subhead.size
             bottomPadding: 10
         }
         Text {
+            textFormat: Text.PlainText
             visible: App.notice !== ""
             text: App.notice
             width: parent.width
@@ -53,6 +56,7 @@ Rectangle {
         LumaTextField { id: displayName; visible: page.creating; width: parent.width; placeholderText: "Your name"; onAccepted: password.forceActiveFocus() }
         LumaTextField { id: password; width: parent.width; placeholderText: "Password"; echoMode: TextInput.Password; onAccepted: page.submit() }
         Text {
+            textFormat: Text.PlainText
             visible: App.errorText !== ""
             text: App.errorText
             width: parent.width
@@ -79,12 +83,14 @@ Rectangle {
         anchors { bottom: parent.bottom; bottomMargin: 20; horizontalCenter: parent.horizontalCenter }
         spacing: 2
         Text {
+            textFormat: Text.PlainText
             anchors.horizontalCenter: parent.horizontalCenter
             text: "Signing in to " + App.serverHost
             color: LumaTokens.textTertiary
             font.pixelSize: LumaTokens.type.caption.size
         }
         Text {
+            textFormat: Text.PlainText
             anchors.horizontalCenter: parent.horizontalCenter
             text: "Messages are encrypted in transit, not end to end."
             color: LumaTokens.textTertiary

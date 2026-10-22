@@ -15,6 +15,7 @@ Rectangle {
     border.color: LumaTokens.hairline
 
     Text {
+        textFormat: Text.PlainText
         id: label
         anchors.centerIn: parent
         text: root.count > 99 ? "99+" : String(root.count)

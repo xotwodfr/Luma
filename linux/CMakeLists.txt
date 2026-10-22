@@ -88,3 +88,7 @@ luma_test(tst_backoff)
 luma_test(tst_sync)
 luma_test(tst_e2e)
 luma_test(tst_models)
+
+# Every QML Text must be plain text: markup in other people's names would otherwise render.
+find_package(Python3 COMPONENTS Interpreter REQUIRED)
+add_test(NAME qml_plaintext COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/check_plaintext.py ${CMAKE_CURRENT_SOURCE_DIR}/qml)

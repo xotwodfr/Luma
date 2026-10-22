@@ -16,6 +16,7 @@ class Sync : public QObject {
 public:
     static inline int typingTtlMs = 5000;
     static inline int sessionCheckEveryMs = 30000;
+    static inline int retryFetchMs = 5000;
 
     Sync(Store &store, ApiClient &api, Transport &transport, QObject *parent = nullptr);
 
@@ -68,4 +69,7 @@ private:
     QHash<QString, qint64> m_lastTypingSent;
     QHash<QString, bool> m_online;
     qint64 m_lastSessionCheck = 0;
+    // Bumped on start/stop; async replies carry the generation they began in and are dropped if
+    // it changed, so a late reply can never write one account's data into the next one's store.
+    quint64 m_gen = 0;
 };

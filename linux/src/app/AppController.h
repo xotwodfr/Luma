@@ -88,4 +88,5 @@ private:
     QString m_phase = QStringLiteral("signedOut"), m_error, m_notice, m_current;
     QVariantMap m_me;
     bool m_synced = false;
+    quint64 m_gen = 0; // session generation: replies from a previous session are dropped
 };

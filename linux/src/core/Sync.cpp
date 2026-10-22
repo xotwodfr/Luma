@@ -43,6 +43,7 @@ Sync::Sync(Store &store, ApiClient &api, Transport &transport, QObject *parent)
 
 void Sync::start(const QString &token, const QString &myUserId)
 {
+    ++m_gen;
     m_token = token;
     m_me = myUserId;
     if (m_store.cursor().has_value())
@@ -52,6 +53,7 @@ void Sync::start(const QString &token, const QString &myUserId)
 
 void Sync::signOut(const QString &reason)
 {
+    ++m_gen;
     m_transport.stop();
     m_ready = false;
     emit signedOut(reason);
@@ -59,6 +61,7 @@ void Sync::signOut(const QString &reason)
 
 void Sync::stop()
 {
+    ++m_gen;
     m_transport.stop();
     m_ready = false;
 }
@@ -174,7 +177,7 @@ void Sync::onFrame(const QJsonObject &f)
             if (item.clientId != id)
                 continue;
             if (code == u"rate_limited") {
-                QTimer::singleShot(5000, this, [this, item] { if (m_ready) sendItem(item); });
+                QTimer::singleShot(5000, this, [this, item, gen = m_gen] { if (gen == m_gen && m_ready) sendItem(item); });
             } else {
                 m_store.setOutboxState(id, OutboxItem::Failed);
                 emit messagesChanged(item.conversationId);
@@ -260,8 +263,8 @@ void Sync::flushDelivered()
 
 void Sync::reloadConversations()
 {
-    m_api.conversations([this](const ApiResult &r) {
-        if (!r.ok())
+    m_api.conversations([this, gen = m_gen](const ApiResult &r) {
+        if (gen != m_gen || !r.ok())
             return;
         QSet<QString> seen;
         for (const auto &v : r.body.object()[u"conversations"].toArray()) {
@@ -283,10 +286,16 @@ void Sync::fetchConversation(const QString &id)
     if (id.isEmpty() || m_fetching.contains(id))
         return;
     m_fetching.insert(id);
-    m_api.conversation(id, [this, id](const ApiResult &r) {
-        m_fetching.remove(id);
-        if (!r.ok())
+    m_api.conversation(id, [this, id, gen = m_gen](const ApiResult &r) {
+        if (gen != m_gen)
             return;
+        m_fetching.remove(id);
+        if (!r.ok()) {
+            // The message is stored and the cursor has moved on; without a retry this conversation
+            // would stay missing from the list until restart. Reload the whole list shortly.
+            QTimer::singleShot(retryFetchMs, this, [this, gen] { if (gen == m_gen) reloadConversations(); });
+            return;
+        }
         const auto c = Conversation::fromJson(r.body.object());
         m_store.upsertConversation(c);
         if (c.lastMessage)
@@ -298,8 +307,8 @@ void Sync::fetchConversation(const QString &id)
 
 void Sync::ensureHistory(const QString &conversationId)
 {
-    m_api.history(conversationId, 0, 50, [this, conversationId](const ApiResult &r) {
-        if (!r.ok())
+    m_api.history(conversationId, 0, 50, [this, conversationId, gen = m_gen](const ApiResult &r) {
+        if (gen != m_gen || !r.ok())
             return;
         for (const auto &v : r.body.object()[u"messages"].toArray())
             m_store.upsertMessage(Message::fromJson(v.toObject()));

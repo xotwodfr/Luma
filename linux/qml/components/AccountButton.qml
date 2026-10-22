@@ -26,8 +26,8 @@ AbstractButton {
             Column {
                 padding: 10
                 spacing: 2
-                Text { text: App.me.displayName || ""; color: LumaTokens.text; font.weight: Font.DemiBold; font.pixelSize: LumaTokens.type.subhead.size }
-                Text { text: "@" + (App.me.username || "") + " on " + App.serverHost; color: LumaTokens.textTertiary; font.pixelSize: LumaTokens.type.caption.size }
+                Text { textFormat: Text.PlainText; text: App.me.displayName || ""; color: LumaTokens.text; font.weight: Font.DemiBold; font.pixelSize: LumaTokens.type.subhead.size }
+                Text { textFormat: Text.PlainText; text: "@" + (App.me.username || "") + " on " + App.serverHost; color: LumaTokens.textTertiary; font.pixelSize: LumaTokens.type.caption.size }
             }
             Rectangle { width: 220; height: 1; color: LumaTokens.hairline }
             LumaButton {
