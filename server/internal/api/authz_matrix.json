@@ -92,6 +92,11 @@
     { "method": "GET", "path": "/v1/files/{draft}", "as": "bob", "expect": 404 },
     { "method": "GET", "path": "/v1/files/not-a-uuid", "as": "alice", "expect": 404 },
 
+    { "method": "GET", "path": "/v1/search?q=hi", "as": "anon", "expect": 401 },
+    { "method": "GET", "path": "/v1/search?q=hi", "as": "carol", "expect": 200 },
+    { "method": "GET", "path": "/v1/search?q=hi&conversation_id={ab}", "as": "carol", "expect": 200 },
+    { "method": "GET", "path": "/v1/search?q=", "as": "carol", "expect": 400 },
+    { "method": "GET", "path": "/v1/search?q=hi&conversation_id=nope", "as": "carol", "expect": 404 },
     { "method": "PATCH", "path": "/v1/conversations/{g}", "as": "anon", "body": { "title": "x" }, "expect": 401 },
     { "method": "PATCH", "path": "/v1/conversations/{g}", "as": "carol", "body": { "title": "x" }, "expect": 403 },
     { "method": "PATCH", "path": "/v1/conversations/{g}", "as": "dave", "body": { "title": "x" }, "expect": 404 },

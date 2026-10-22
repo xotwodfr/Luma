@@ -182,3 +182,17 @@ func TestOpenDirect_LimitOnlyCountsNew(t *testing.T) {
 		t.Fatalf("21st new DM in a day: %d", r.Status)
 	}
 }
+
+func TestSearch_RateLimited(t *testing.T) {
+	h := newHarness(t)
+	a := h.register("alice")
+	limited := 0
+	for i := 0; i < 35; i++ {
+		if r := h.do("GET", "/v1/search?q=hello", a.Token, nil); r.Status == 429 && r.Header.Get("Retry-After") != "" {
+			limited++
+		}
+	}
+	if limited == 0 {
+		t.Fatal("35 rapid searches were never rate limited (30/minute)")
+	}
+}

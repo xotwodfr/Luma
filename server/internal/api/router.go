@@ -68,7 +68,8 @@ func New(d Deps) *App {
 	}
 	sendLimit := httpx.NewLimiter(d.SendPer10s, 10*time.Second)
 	chatH := &chat.Handlers{Svc: a.Chat, SendLimit: sendLimit, OpenLimit: httpx.NewLimiter(20, 24*time.Hour), LookupLimit: lookupLimit,
-		GroupLimit: httpx.NewLimiter(10, 24*time.Hour), AddLimit: httpx.NewLimiter(300, 24*time.Hour)}
+		GroupLimit: httpx.NewLimiter(10, 24*time.Hour), AddLimit: httpx.NewLimiter(300, 24*time.Hour),
+		SearchLimit: httpx.NewLimiter(30, time.Minute)}
 	filesH := &files.Handlers{Svc: a.Files, UploadLimit: httpx.NewLimiter(20, time.Minute)}
 	a.Hub = realtime.NewHub(realtime.Options{
 		Chat: a.Chat, Auth: a.Auth, Pool: d.Pool, Logger: d.Logger, SendLimit: sendLimit, HelloTimeout: d.HelloTimeout,
@@ -118,6 +119,7 @@ func New(d Deps) *App {
 	handle("GET /v1/conversations/{id}/messages", req(chatH.History))
 	handle("POST /v1/conversations/{id}/messages", req(chatH.Send))
 	handle("POST /v1/conversations/{id}/read", req(chatH.Read))
+	handle("GET /v1/search", req(chatH.Search))
 	handle("POST /v1/files", req(filesH.Upload))
 	handle("GET /v1/files/{id}", req(filesH.Get))
 	handle("GET /v1/realtime", a.Hub.ServeHTTP)

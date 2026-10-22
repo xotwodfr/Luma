@@ -217,6 +217,32 @@ paths:
       requestBody: { required: true, content: { application/json: { schema: { type: object, required: [seq], properties: { seq: { type: integer } } } } } }
       responses: { "200": { description: OK, content: { application/json: { schema: { type: object, properties: { last_read_seq: { type: integer } } } } } } }
 
+  /v1/search:
+    get:
+      summary: Full-text search over messages the caller can see, newest first
+      description: |
+        `q` uses web-search syntax (`"phrase"`, `-exclude`, `or`) with the `simple` configuration (no stemming).
+        Only messages inside the caller's visibility window(s) are searched. Messages from people the caller
+        blocked are included (collapse them client-side, as in the timeline). 30 per minute per user.
+        `headline` is plain text: matches are wrapped in U+0001 … U+0002, which never otherwise appear in it.
+        Never interpret it as HTML.
+      parameters:
+        - { name: q, in: query, required: true, schema: { type: string, minLength: 1, maxLength: 256 } }
+        - { name: conversation_id, in: query, schema: { type: string, format: uuid } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 50, default: 20 } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items: { type: object, properties: { conversation_id: { type: string, format: uuid }, message: { $ref: "#/components/schemas/Message" }, headline: { type: string } } }
+        "400": { $ref: "#/components/responses/Error" }
+        "429": { $ref: "#/components/responses/RateLimited" }
   /v1/files:
     post:
       summary: Upload a file for a conversation (attach it by sending kind "file")

@@ -19,6 +19,7 @@ type Handlers struct {
 	LookupLimit *httpx.Limiter
 	// GroupLimit counts group creations; AddLimit counts people added to groups (create or add).
 	GroupLimit, AddLimit *httpx.Limiter
+	SearchLimit          *httpx.Limiter
 }
 
 func convID(w http.ResponseWriter, r *http.Request) (uuid.UUID, bool) {
@@ -278,4 +279,37 @@ func (h *Handlers) Settings(w http.ResponseWriter, r *http.Request) {
 	}
 	c, err := h.Svc.UpdateSettings(r.Context(), auth.MustPrincipal(r).UserID, id, in)
 	reply(w, r, c, err)
+}
+
+// Search: GET /v1/search?q=&conversation_id=&limit= (30/minute per user).
+func (h *Handlers) Search(w http.ResponseWriter, r *http.Request) {
+	me := auth.MustPrincipal(r).UserID
+	if !h.SearchLimit.Limit(w, me.String()) {
+		return
+	}
+	q := r.URL.Query()
+	var conv *uuid.UUID
+	if v := q.Get("conversation_id"); v != "" {
+		id, err := uuid.Parse(v)
+		if err != nil {
+			httpx.Fail(w, r, httpx.ErrNotFound)
+			return
+		}
+		conv = &id
+	}
+	limit := 20
+	if v := q.Get("limit"); v != "" {
+		n, err := strconv.Atoi(v)
+		if err != nil {
+			httpx.Fail(w, r, errBadSearch)
+			return
+		}
+		limit = n
+	}
+	res, err := h.Svc.Search(r.Context(), me, q.Get("q"), conv, limit)
+	if err != nil {
+		httpx.Fail(w, r, err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, map[string]any{"results": res})
 }
