@@ -39,7 +39,7 @@ reactions, replies, edits and voice messages to be added without rewriting the s
 ## 2. Decisions taken with the owner
 | Decision | Choice |
 |---|---|
-| Encryption | TLS in transit + encrypted-at-rest disk; server can read messages. Envelope shape is E2EE-ready (§5.4). |
+| Encryption | TLS in transit; no E2EE; host disk is not encrypted (see §11.1). Server can read messages. Envelope shape is E2EE-ready (§5.4). |
 | Shared code | Share contracts, not runtime code: design tokens, OpenAPI, realtime schemas, golden test vectors, generated constants. Each client is fully native. |
 | Registration | Single-use invite codes. Config flag `LUMA_REGISTRATION=invite|open|closed`, default `invite`. |
 | Platforms | iOS + macOS: Swift/SwiftUI. Android: Kotlin/Compose. Windows: C#/WinUI 3. Linux: Qt 6 Quick + C++. |
@@ -253,6 +253,118 @@ Each milestone ends with: working code, test output, verification matrix, known 
   Blocking is in the MVP (`blocks` table): a blocked user cannot DM you, add you to groups or see your presence;
   in shared groups, their messages stay visible but are collapsed client-side.
 
-## 11. Left to the builder
+## 11. Requirements added at approval (2026-10-22)
+
+### 11.1 Security
+- **No E2EE in v1, stated explicitly** in the README, the API docs and the in-app "About & privacy" screen:
+  messages are protected by TLS in transit (Cloudflare edge → tunnel → Caddy → server on loopback), and the
+  operator *can* read them. Credentials are stored only as Argon2id hashes, session tokens only as SHA-256
+  hashes, and invite codes only as hashes.
+  **Verified 2026-10-22: the host disk is NOT encrypted at rest** (`sdb2` is LVM2 → btrfs, no LUKS).
+  So v1 protects stored data with: Docker volumes readable only by root, the DB reachable only on Luma's private
+  network, and backups encrypted with `age` to a recipient key whose private half is kept off the server's backup
+  directory. Full-disk encryption is listed in the runbook as a host-level recommendation; Luma won't claim it.
+- **Threat model** (`docs/security/threat-model.md`, STRIDE per trust boundary: client ↔ edge, edge ↔ server,
+  server ↔ DB/disk, user ↔ user). Covers abuse and harassment as well as attackers.
+- **Account enumeration:**
+  - Login returns the same `invalid_credentials` error with equalised timing; unknown users get a dummy Argon2 verify.
+  - Registration with a taken username returns `username_unavailable` only after a valid invite code is presented,
+    and is rate-limited.
+  - `GET /users/{username}` requires auth, and returns 404 identically for nonexistent users and for users who blocked the caller.
+- **Sessions:**
+  - Tokens are created with crypto RNG, returned once, never logged, and compared by hash lookup.
+  - A password change revokes all other sessions. Logout revokes the current one.
+  - Revocation closes live sockets within one second (the hub is indexed by session).
+- **Authorization tests:** a table-driven test suite runs every endpoint and every WebSocket frame as: owner,
+  member, admin, non-member, former member (both inside and outside their visibility window), blocked user and
+  unauthenticated caller. Expected allow/deny is declared in one matrix file.
+- **Uploads:**
+  - Size cap is enforced while streaming, with no unbounded buffering.
+  - MIME type is sniffed and checked against an allowlist for inline display (png, jpeg, webp, gif, heic → image).
+    Everything else is served as `application/octet-stream` + `attachment`.
+  - Files get random IDs with no user-controlled paths. Image dimensions are checked against a decompression-bomb limit.
+  - Files are reachable only through a membership-checked route. Orphaned uploads are swept after 24 h.
+- **Rate limiting & abuse prevention:**
+  - Per-IP and per-user buckets (§5.3).
+  - New-account limits: DMs to at most 20 new people per day, group creation 10/day.
+  - Invite quota. Admin CLI to disable a user and revoke all their sessions.
+- **Blocking is enforced everywhere, in one SQL predicate reused by all paths.** Rules:
+  - A blocked user cannot open or send to a DM with the blocker, over REST or WebSocket.
+  - A blocked user cannot add the blocker to a group, and the blocker cannot be added to groups by them.
+  - A blocked user doesn't receive the blocker's presence or typing events.
+  - Exact-username lookup returns 404 to a blocked user.
+  - In a group both belong to, messages are still delivered: hiding them is a client-side collapse, a documented choice.
+  - Integration tests cover every path listed above.
+
+### 11.2 Reliable messaging — transactions and guarantees
+- **Send (REST or WS `send`)**, in one transaction:
+  1. Check membership/visibility/block.
+  2. `INSERT … ON CONFLICT (sender_id, client_id) DO NOTHING RETURNING`. On conflict, select the
+     existing message and return it unchanged, without bumping seq or writing new events.
+  3. `UPDATE conversations SET last_seq=last_seq+1 RETURNING last_seq` (row lock serialises per
+     conversation). Because conflict detection comes first, retries never burn seq numbers.
+  4. Write the message with that seq.
+  5. Insert one `user_events` row per active member, using the per-user counter `users.event_seq`, which is locked
+     in a deterministic user-id order to avoid deadlocks.
+  6. Set the sender's `last_read_seq`/`last_delivered_seq` to the new seq.
+  7. COMMIT.
+  - Only after COMMIT does the server send `ack` and fan out live. If the commit fails, the client gets `error`
+    and its outbox entry stays pending. Seq has no gaps within a conversation, because seq is allocated
+    in the same transaction that inserts the message.
+- **Membership change:** in one transaction, update `members` (with `joined_seq`/`left_seq`), add a `system` message
+  using the same send path, and write `user_events` for affected users, including the removed user's own `membership` event.
+- **Read/delivered watermarks:** `UPDATE members SET last_read_seq = GREATEST(last_read_seq, $seq)` clamped to
+  `last_seq`, so it's monotonic and safe to replay. A `user_events` row goes to the reader's other devices, and a
+  receipt event to the other members (watermarks only, batched).
+- **Replay:**
+  - A `user_events` row is written in the same transaction as the change it records, so a committed change
+    always has its event.
+  - The client's `hello{cursor}` replays `seq > cursor` in order, then switches to live.
+  - Live events that arrive during the replay are buffered and deduplicated by event seq. The client
+    stores its cursor only after it has applied the event.
+  - If the cursor is older than the prune horizon, the server sends `resync_required`.
+- **Guarantees:**
+  - At-least-once delivery of events to each device; effectively once, because the client dedups by event seq and the message by (conversation, seq).
+  - Messages are totally ordered within each conversation. There is no cross-conversation ordering.
+  - A durable ack means the message is committed.
+- **Tests on real Postgres:**
+  - N goroutines sending concurrently to one conversation must produce seqs 1..N with no gaps or dups.
+  - Duplicate `client_id` retries, including concurrent ones.
+  - Reconnect with a stale cursor.
+  - Killing the server mid-stream and restarting: there are no lost committed messages, and an uncommitted
+    message is never acked.
+  - Events missed while offline are replayed.
+  - A membership change racing a send.
+  - Read watermark regression is ignored.
+
+### 11.3 Design quality gate (Milestone 1)
+- A real rendered preview (`design/preview/`, a static HTML page driven by the generated tokens) showing
+  light/dark versions of the iOS chat, Android list, macOS three-pane, Windows list-detail and Linux three-pane
+  adaptations, plus states (empty, loading, offline/reconnecting, error) and the component sheet.
+  - It's a design-review surface, not a client. The native clients stay native.
+- Screenshotted headlessly (Playwright) and self-critiqued against the anti-goals:
+  - A design-critique pass.
+  - Automated contrast checks.
+  - Obvious weaknesses corrected before the owner sees it.
+- The Linux Qt client is then visually checked against the preview.
+
+### 11.4 Order
+Design foundation → backend vertical slice (real Postgres) → Linux Qt as the first fully working client →
+contract validation, with fixes to `openapi.yaml`/vectors → Android → Apple → Windows. Unbuildable clients are
+reported as "written, not built".
+
+### 11.5 Operations
+- **Isolation:** compose project `luma`, its own network, volumes prefixed `luma_`, loopback-only port 8790,
+  no shared DB. A preflight script checks the port is free and that no `luma_*` volume would be recreated.
+- **Health:** `/v1/health/live`, `/v1/health/ready` (DB + migration version + upload dir writable), plus a compose healthcheck.
+- **Migrations:** forward-only and applied at startup under an advisory lock. Each migration documents its manual
+  rollback SQL in a header comment. The rollback procedure is restore-from-backup, then deploy the previous image tag. Images are tagged by git SHA.
+- **Backups:**
+  - `deploy/backup.sh` runs `pg_dump -Fc` plus the uploads tar, with checksums.
+  - `deploy/restore.sh` restores into a scratch `luma_restore_test` project. Both are exercised by a test run and the output is recorded.
+- **Runbook** (`deploy/RUNBOOK.md`): first deploy, upgrade, rollback, backup/restore, rotate secrets, revoke a user, check logs.
+- **The first production deploy waits for the owner's explicit approval.**
+
+## 12. Left to the builder
 Internal package structure, exact library versions, token numeric values within the direction above,
 exact copy text, test layout, CI details.
